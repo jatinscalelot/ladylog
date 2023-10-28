@@ -1,0 +1,25 @@
+{
+  "name": "ladylog",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "async": "^3.2.4",
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.1.1",
+    "debug": "~2.6.9",
+    "dotenv": "^16.3.1",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-ejs-layouts": "^2.5.1",
+    "firebase-admin": "^11.11.0",
+    "http-errors": "~1.6.3",
+    "mongoose": "^7.5.3",
+    "mongoose-paginate-v2": "^1.7.4",
+    "morgan": "~1.9.1",
+    "multer": "^1.4.5-lts.1"
+  }
+}
