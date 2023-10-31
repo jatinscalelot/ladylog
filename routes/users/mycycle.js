@@ -18,74 +18,6 @@ function isDateBetween(startTimestamp, endTimestamp, dateTimestamp) {
     return startDateObj <= dateToCheckObj && dateToCheckObj <= endDateObj;
 };
 
-// router.get('/' , helper.authenticateToken , async (req , res) => {
-//     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-//     res.setHeader('Access-Control-Allow-Origin', '*');
-//     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-//         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-//         let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
-//         if(userData && userData != null){
-//             console.log("current timestamp :",Date.now());
-//             const currentTimestamp = Date.now();
-//             if(userData.period_start_date != 0 && userData.period_end_date != 0 && currentTimestamp > userData.period_end_date){
-//                let newcycle = {
-//                     period_start_date: userData.period_start_date,
-//                     period_end_date: userData.period_end_date,
-//                     period_days: period_days,
-//                     createdBy: new mongoose.Types.ObjectId(userData._id)
-//                }
-//                let addNewCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newcycle);
-//                let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(1).lean();
-//                if(lastCycle != null){
-
-//                }
-//             }else{
-//                 //do somthing here
-//             }
-//             let last_month_cycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(2).lean();
-//             if(last_month_cycle.length > 1){
-//                 const next_period_start_date = addDaysToTimestamp(userData.period_end_date , userData.cycle);
-//                 const next_period_end_date = addDaysToTimestamp(next_period_start_date , userData.period_days-1);
-//                 let data = {
-//                     period_days: userData.period_days,
-//                     last_cycle: {
-//                         period_start_date: last_month_cycle[1].period_start_date,
-//                         period_end_date: last_month_cycle[1].period_end_date,
-//                     },
-//                     current_cycle: {
-//                         period_start_date: userData.period_start_date,
-//                         period_end_date: userData.period_end_date,
-//                     },
-//                     next_cycle: {
-//                         next_period_start_date: next_period_start_date,
-//                         next_period_end_date: next_period_end_date
-//                     }
-//                 }
-//                 return responseManager.onSuccess('My cycle' , data , res);
-//             }else{
-//                 const next_period_start_date = addDaysToTimestamp(userData.period_end_date , userData.cycle);
-//                 const next_period_end_date = addDaysToTimestamp(next_period_start_date , userData.period_days-1);
-//                 let data = {
-//                     last_cycle: {
-//                         period_start_date: last_month_cycle[0].period_start_date,
-//                         period_end_date: last_month_cycle[0].period_end_date,
-//                         period_days: last_month_cycle[0].period_days
-//                     },
-//                     next_cycle: {
-//                         next_period_start_date: next_period_start_date,
-//                         next_period_end_date: next_period_end_date
-//                     }
-//                 }
-//                 return responseManager.onSuccess('My cycle' , data , res);
-//             }
-//         }else{
-//             return responseManager.badrequest({ message: 'Invalid token to get user, please try again' }, res);
-//         }   
-//     }else{
-//         return responseManager.badrequest({ message: 'Invalid token to get user, please try again' }, res);
-//     }
-// });
-
 router.get('/' , helper.authenticateToken , async (req , res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -99,7 +31,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     period_start_date: userData.period_start_date,
                     period_end_date: userData.period_end_date,
                     period_days: userData.period_days,
-                    createdBy: new mongoose.Types.ObjectId(req.token._id)
+                    createdBy: new mongoose.Types.ObjectId(userData._id)
                 }
                 await primary.model(constants.MODELS.mycycles , mycycleModel).create(obj);
                 const next_period_start_date = helper.addDaysToTimestamp(userData.period_end_date , userData.cycle+1);

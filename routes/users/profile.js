@@ -40,10 +40,11 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                 period_start_date: next_period_start_date,
                 period_end_date: next_period_end_date,
                 dob: dob,
+                is_profile_completed: true,
                 updatedBy: new mongoose.Types.ObjectId(req.token._id)
             }
-            await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(req.token.userid, obj);
-            let updatedData = await primary.model(constants.MODELS.users, userModel).findById(req.token.userid).lean();
+            await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(req.token._id, obj);
+            let updatedData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
             let lastCycle = {
                 period_start_date: period_start_date,
                 period_end_date: period_end_date,
