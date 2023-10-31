@@ -26,11 +26,11 @@ router.post('/', async (req, res) => {
                 }
                 let insertedData = await primary.model(constants.MODELS.users, userModel).create(obj);
                 let accessToken = await helper.generateAccessToken({ _id: insertedData._id.toString() });
-                return responseManager.onSuccess('User register successfully!', { token: accessToken }, res);
+                return responseManager.onSuccess('User register successfully!', { token: accessToken , is_login: false }, res);
             }else{
                 if(userData){
                     let accessToken = await helper.generateAccessToken({ _id: userData._id.toString() });
-                    return responseManager.onSuccess('User login successfully!', { token: accessToken }, res);
+                    return responseManager.onSuccess('User login successfully!', { token: accessToken , is_login: true }, res);
                 }else{
                     return responseManager.onError({message: 'Internal server error...!'} , res);
                 }
