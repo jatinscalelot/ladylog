@@ -35,17 +35,18 @@ mongoose.connection.once('open', () => {
 
 const adminpaths = [
   {pathUrl: '/login', routerFile: 'login'},
+  {pathUrl: '/dashboard', routerFile: 'dashboard'},
   {pathUrl: '/symptoms', routerFile: 'symptoms'},
 ]
 adminpaths.forEach((path) => {
   app.use('/admin'+path.pathUrl, require('./routes/admin/'+path.routerFile));
 });
 
-
 const userpaths = [
   { pathUrl: '/login', routerFile: 'login' },
   { pathUrl: '/profile', routerFile: 'profile' },
   { pathUrl: '/mycycle', routerFile: 'mycycle' },
+  { pathUrl: '/symptoms', routerFile: 'AddandGetUserSymptoms' },
   { pathUrl: '/getSymptoms', routerFile: 'getSymptoms' },
 ];
 userpaths.forEach((path) => {

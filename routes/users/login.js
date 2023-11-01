@@ -10,7 +10,7 @@ const userModel = require('../../models/users/users.model');
 router.post('/', async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    const { token } = req.body
+    const { token , fcm_token } = req.body;
     if (token && token.trim() != '') {
         await admin.auth().verifyIdToken(token).then(async (decodedToken) => {
             let primary = mongoConnection.useDb(constants.DEFAULT_DB);
@@ -19,14 +19,14 @@ router.post('/', async (req, res) => {
                 let obj = {
                     user_id: decodedToken.user_id,
                     mobile: decodedToken.phone_number,
+                    fcm_token: (fcm_token) ? fcm_token.trim() : '',
                     exp: decodedToken.exp,
-                    is_approved: true,
-                    is_login: true,
                     status: true
-                }
+                };
                 let newUser = await primary.model(constants.MODELS.users, userModel).create(obj);
-                let accessToken = await helper.generateAccessToken({ _id: newUser._id.toString() });
-                return responseManager.onSuccess('User register successfully!', { token: accessToken , is_profile_completed: newUser.is_profile_completed }, res);
+                let updateUSer = await primary.model(constants.MODELS.users , userModel).findByIdAndUpdate(newUser._id , {channelID: newUser._id.toString() + '_' + newUser.mobile.toString()});
+                let accessToken = await helper.generateAccessToken({ _id: newUser._id.toString()});
+                return responseManager.onSuccess('User register successfully!', { token: accessToken , is_profile_completed: updateUSer.is_profile_completed }, res);
             }else{
                 if(userData){
                     let accessToken = await helper.generateAccessToken({ _id: userData._id.toString() });
