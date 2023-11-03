@@ -14,8 +14,9 @@ router.get('/' , helper.authenticateToken ,  async (req , res) => {
     let primary = await mongoConnection.useDb(constants.DEFAULT_DB);
     let admin = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(admin && admin != null){
-      let allUsers = await primary.model(constants.MODELS.users , userModel).find({is_profile_completed: true}).select('_id name mobile cycle period_days period_start_date period_end_date').sort({createdAt: -1}).lean();
-      console.log('allUsers :',allUsers);
+      const page = req.body.page;
+      const limit = req.body.limit;
+      let allUsers = await primary.model(constants.MODELS.users , userModel).find({is_profile_completed: true}).select('_id name mobile cycle period_days period_start_date period_end_date').limit(limit).skip(limit * page).sort({createdAt: -1}).lean();
       return responseManager.onSuccess('All user details...!' , allUsers , res);
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, please try again...!'} , res);

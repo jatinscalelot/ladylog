@@ -1,15 +1,13 @@
 const express = require('express');
 const router = express.Router();
+
 const mongoConnection = require('../../utilities/connections');
 const responseManager = require('../../utilities/response.manager');
 const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const userModel = require('../../models/users/users.model');
-const symptomModel = require('../../models/admin/symptoms.model');
-const userSymptomsModel = require('../../models/users/userSymptoms.model');
 const mycycleModel = require('../../models/users/mycycle.model');
 const mongoose = require('mongoose');
-const async = require('async');
 
 router.get('/' , helper.authenticateToken , async (req , res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
@@ -20,6 +18,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
         if(userData && userData != null){
             const currentTimestamp = Date.now();
             if(currentTimestamp > userData.period_end_date){
+                console.log('if part...!');
                 let obj = {
                     period_start_date: userData.period_start_date,
                     period_end_date: userData.period_end_date,
@@ -27,7 +26,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     createdBy: new mongoose.Types.ObjectId(userData._id)
                 }
                 await primary.model(constants.MODELS.mycycles , mycycleModel).create(obj);
-                const next_period_start_date = helper.addDaysToTimestamp(userData.period_end_date , userData.cycle+1);
+                const next_period_start_date = helper.addDaysToTimestamp(userData.period_end_date , userData.cycle-1);
                 const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , userData.period_days-1);
                 let updateUser = await primary.model(constants.MODELS.users , userModel).findById(userData._id , {period_start_date: next_period_start_date , period_end_date: next_period_end_date} , {returnOriginal: false}).lean();
                 let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(1).lean();
@@ -45,22 +44,18 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                 return responseManager.onSuccess('Cycle data...!' , data , res);
             }else{
                 let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(1).lean();
-                if(lastCycle != null){
-                    let data = {
-                        period_days: userData.period_days,
-                        lastCycle: {
-                            period_start_date: lastCycle.period_start_date,
-                            period_end_date: lastCycle.period_end_date
-                        },
-                        nextCycle: {
-                            period_start_date: userData.period_start_date,
-                            period_end_date: userData.period_end_date
-                        }
+                let data = {
+                    period_days: userData.period_days,
+                    lastCycle: {
+                        period_start_date: lastCycle[0].period_start_date,
+                        period_end_date: lastCycle[0].period_end_date
+                    },
+                    nextCycle: {
+                        period_start_date: userData.period_start_date,
+                        period_end_date: userData.period_end_date
                     }
-                    return responseManager.onSuccess('Cycle data...!' , data , res);
-                }else{
-                    return responseManager.onError('Past cycle not found...!' , 1 , res);
                 }
+                return responseManager.onSuccess('Cycle data...!' , data , res);
             }
         }else{
             return responseManager.badrequest({ message: 'Invalid token to get user, please try again' }, res);

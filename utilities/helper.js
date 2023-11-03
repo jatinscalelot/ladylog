@@ -120,7 +120,7 @@ exports.digitTomoney = (cost) => {
 };
 exports.addDaysToTimestamp = (timestamp , days) => {
     var date = new Date(timestamp);
-    date.setDate(date.getDate() + days+1);
+    date.setDate(date.getDate() + days);
     var updatedTimestamp = date.getTime();
     return updatedTimestamp;
 };
