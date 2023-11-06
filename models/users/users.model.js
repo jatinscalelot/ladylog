@@ -5,6 +5,10 @@ let schema = new mongoose.Schema({
 		type: String,
 		require: true
 	},
+	profile_pic: {
+		type: String,
+		default: ''
+	},
 	is_subscriber: {
 		type: Boolean,
 		default: false

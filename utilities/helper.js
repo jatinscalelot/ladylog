@@ -124,3 +124,6 @@ exports.addDaysToTimestamp = (timestamp , days) => {
     var updatedTimestamp = date.getTime();
     return updatedTimestamp;
 };
+exports.bytesToMB = (bytes) => {
+    return (bytes / (1024 * 1024)).toFixed(2);
+};  

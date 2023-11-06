@@ -37,6 +37,7 @@ const adminpaths = [
   {pathUrl: '/login', routerFile: 'login'},
   {pathUrl: '/dashboard', routerFile: 'dashboard'},
   {pathUrl: '/symptoms', routerFile: 'symptoms'},
+  {pathUrl: '/products', routerFile: 'product'},
 ];
 adminpaths.forEach((path) => {
   app.use('/admin'+path.pathUrl, require('./routes/admin/'+path.routerFile));
@@ -50,6 +51,7 @@ const userpaths = [
   { pathUrl: '/symptoms', routerFile: 'AddandGetUserSymptoms' },
   { pathUrl: '/getSymptoms', routerFile: 'getSymptoms' },
   { pathUrl: '/history', routerFile: 'history' },
+  { pathUrl: '/products', routerFile: 'product' },
 ];
 userpaths.forEach((path) => {
   app.use('/user' + path.pathUrl, require('./routes/users/' + path.routerFile));
@@ -63,7 +65,7 @@ app.use(function(err, req, res, next) {
 });
 
 // Please do not remove following two line of code...
-// console.log(helper.addDaysToTimestamp(1703591940000 , 28-1));
+// console.log(helper.addDaysToTimestamp(1683504000000 , 28-1));
 // console.log(helper.addDaysToTimestamp(1703246340000 , 5-1));
 
 module.exports = app;

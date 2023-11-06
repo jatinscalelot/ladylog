@@ -1,5 +1,6 @@
 let express = require('express');
 let router = express.Router();
+
 const admin = require('../../config/firebaseAdmin');
 const mongoConnection = require('../../utilities/connections');
 const responseManager = require('../../utilities/response.manager');
