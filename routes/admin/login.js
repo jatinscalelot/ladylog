@@ -11,7 +11,7 @@ const adminModel = require('../../models/admin/admin.model');
 router.post('/' , async (req , res) => {
   const {email , password} = req.body;
   if(email && email.trim() != '' && password && password.trim() != ''){
-    let primary = await mongoConnection.useDb(constants.DEFAULT_DB);
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let admin = await primary.model(constants.MODELS.admins , adminModel).findOne({email : email}).lean();
     if(admin && admin != null){
       let decPassword = await helper.passwordDecryptor(admin.password);

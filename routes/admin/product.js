@@ -18,8 +18,8 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
-      const activeProducts = await primary.model(constants.MODELS.products , productModel).find({status: true}).lean();
-      const notActiveProducts = await primary.model(constants.MODELS.products , productModel).find({status: false}).lean();
+      const activeProducts = await primary.model(constants.MODELS.products , productModel).find({active: true , status: true}).select('-createdBy -updatedBy -createdAt -updatedAt -__v -status').lean();
+      const notActiveProducts = await primary.model(constants.MODELS.products , productModel).find({active: false , status: true}).select('-createdBy -updatedBy -createdAt -updatedAt -__v -status').lean();
       let data = {
         activeProducts: activeProducts,
         notActiveProducts: notActiveProducts
@@ -41,7 +41,7 @@ router.get('/product' , helper.authenticateToken , async (req , res) => {
     if(adminData && adminData != null){
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
         let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
-        if(productData && productData != null){
+        if(productData && productData != null && productData.status === true){
           return responseManager.onSuccess('Product details...!' , productData , res);
         }else{
           return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
@@ -69,7 +69,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             if(description && description.trim() != ''){
               if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
                 let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).lean();
-                if(productData && productData != null){
+                if(productData && productData != null && productData.status === true){
                   let obj = {
                     title: title,
                     image: header_image,
@@ -146,6 +146,36 @@ router.post('/productImages' , helper.authenticateToken , upload.single('product
       }
     }else{
       return responseManager.badrequest({ message: 'Invalid toke to get admin, Please try again...!' } , res);
+    }
+  }else{
+    return responseManager.badrequest({ message: 'Invalid toke to get admin, Please try again...!' } , res);
+  }
+});
+
+router.post('/deleteProduct' , helper.authenticateToken , async (req , res) => {
+  const {productId} = req.body;
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
+    if(adminData && adminData != null){
+      if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
+        let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).lean();
+        if(productData && productData != null && productData.status === true){
+          let obj = {
+            status: false,
+            updatedBy: adminData._id,
+            updatedAt: new Date()
+          };
+          let updateProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id , obj);
+          return responseManager.onSuccess('Product deleted successfully...!' , 1 , res);
+        }else{
+          return responseManager.badrequest({message: 'Invalid productId to get product details, Please try again...!'} , res);
+        }
+      }else{
+        return responseManager.badrequest({message: 'Invalid productId to get product details, Please try again...!'} , res);
+      }
+    }else{
+      return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'} , res);
     }
   }else{
     return responseManager.badrequest({ message: 'Invalid toke to get admin, Please try again...!' } , res);

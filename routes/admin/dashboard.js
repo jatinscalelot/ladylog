@@ -11,7 +11,7 @@ const userModel = require('../../models/users/users.model');
 
 router.get('/' , helper.authenticateToken ,  async (req , res) => {
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-    let primary = await mongoConnection.useDb(constants.DEFAULT_DB);
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let admin = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(admin && admin != null){
       const page = req.body.page;

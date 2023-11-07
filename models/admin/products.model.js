@@ -17,9 +17,13 @@ let schema = new mongoose.Schema({
 		type: String,
 		require: true
 	},
-	status: {
+	active: {
 		type: Boolean,
 		require: true
+	},
+	status: {
+		type:Boolean,
+		default: true
 	},
 	createdBy: {
 		type: mongoose.Types.ObjectId,
