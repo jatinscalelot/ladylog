@@ -6,7 +6,8 @@ let constants = {
         symptoms: 'symptoms',
         usersymptoms: 'usersymptoms',
         mycycles: 'mycycles',
-        products: 'products'
+        products: 'products',
+        stories: 'stories'
     }
 };
 module.exports = constants;

@@ -11,6 +11,13 @@ const symptomModel = require('../../models/admin/symptoms.model');
 const upload = require('../../utilities/multer.functions');
 const aws = require('../../utilities/aws');
 
+function formatString(input) {
+  const words = input.replace(/_/g, ' ').split(' ');
+  const capitalizedWords = words.map(word => word.charAt(0).toUpperCase() + word.slice(1));
+  const formattedString = capitalizedWords.join(' ');
+  return formattedString;
+};
+
 router.get('/' , helper.authenticateToken , async (req , res) => {
   const {page , limit} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
@@ -22,7 +29,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
       },{
         page,
         limit: parseInt(limit),
-        select: '_id header_name symptom_name fill_icon unfill_icon status',
+        select: '_id type header_name symptom_name fill_icon unfill_icon status',
         sort: {createdAt: -1},
         lean: true
       }).then((symptoms) => {
@@ -45,7 +52,7 @@ router.get('/symptom' , helper.authenticateToken , async (req , res) => {
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(symptomID && symptomID.trim() != '' && mongoose.Types.ObjectId.isValid(symptomID)){
-        let symptom = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomID).select('_id header_name symptom_name fill_icon unfill_icon status').lean();
+        let symptom = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomID).select('_id type header_name symptom_name fill_icon unfill_icon status').lean();
         if(symptom && symptom != null && symptom.status === true){
           return responseManager.onSuccess('Symptom data...!', symptom , res);
         }else{
@@ -77,7 +84,8 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                 let symptom = await primary.model(constants.MODELS.symptoms , symptomModel).findById(symptomID).lean();
                 if(symptom && symptom != null){
                   let obj = {
-                    header_name: header_name,
+                    type: header_name,
+                    header_name: formatString(header_name),
                     symptom_name: symptom_name,
                     unfill_icon: unfill_icon.trim(),
                     fill_icon: fill_icon.trim(),
@@ -91,7 +99,8 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                 }
               }else{
                 let obj = {
-                  header_name: header_name,
+                  type: header_name,
+                  header_name: formatString(header_name),
                   symptom_name: symptom_name,
                   unfill_icon: unfill_icon.trim(),
                   fill_icon: fill_icon.trim(),

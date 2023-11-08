@@ -1,28 +1,24 @@
 let mongoose = require("mongoose");
 let mongoosePaginate = require("mongoose-paginate-v2");
 let schema = new mongoose.Schema({
-	header_name: {
+	title: {
 		type: String,
 		require: true
 	},
-	type: {
+	header: {
 		type: String,
 		require: true
 	},
-	symptom_name: {
+	writer_name: {
 		type: String,
 		require: true
 	},
-	fill_icon: {
-		type: String,
-		require: true
-	},
-	unfill_icon: {
+	description: {
 		type: String,
 		require: true
 	},
 	status: {
-		type: Boolean,
+		type:Boolean,
 		default: true
 	},
 	createdBy: {

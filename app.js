@@ -38,6 +38,7 @@ const adminpaths = [
   {pathUrl: '/dashboard', routerFile: 'dashboard'},
   {pathUrl: '/symptoms', routerFile: 'symptoms'},
   {pathUrl: '/products', routerFile: 'product'},
+  {pathUrl: '/stories', routerFile: 'story'},
 ];
 adminpaths.forEach((path) => {
   app.use('/admin'+path.pathUrl, require('./routes/admin/'+path.routerFile));

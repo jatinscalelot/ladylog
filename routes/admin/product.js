@@ -11,7 +11,6 @@ const productModel = require('../../models/admin/products.model');
 const upload = require('../../utilities/multer.functions');
 const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
-const async = require('async');
 
 router.get('/' , helper.authenticateToken , async (req , res) => {
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
