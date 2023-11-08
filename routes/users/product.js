@@ -24,7 +24,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.get('/product' , helper.authenticateToken , async (req , res) => {
+router.post('/product' , helper.authenticateToken , async (req , res) => {
   const {productId} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
