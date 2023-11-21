@@ -9,7 +9,7 @@ const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
 const storyMasterModel = require('../../models/admin/story.master');
 
-router.get('/' , helper.authenticateToken , async (req , res) => {
+router.post('/' , helper.authenticateToken , async (req , res) => {
   const {pagination , page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
@@ -33,7 +33,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
           return responseManager.onError(error, res)
         });
       }else{
-        let storyCategories = await primary.model(constants.MODELS.storymasters, storyMasterModel).find({status: true}).select('_id category_name').lean();
+        let storyCategories = await primary.model(constants.MODELS.storymasters, storyMasterModel).find({status: true}).select('_id category_name description status').lean();
         return responseManager.onSuccess('List of story category...!' , storyCategories , res);
       }
     }else{
@@ -44,8 +44,8 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.get('/storyCategory', helper.authenticateToken, async (req , res) => {
-  const {categoryID} = req.query;
+router.post('/getone', helper.authenticateToken, async (req , res) => {
+  const {categoryID} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
@@ -68,7 +68,7 @@ router.get('/storyCategory', helper.authenticateToken, async (req , res) => {
   }
 });
 
-router.post('/' , helper.authenticateToken , async (req , res) => {
+router.post('/save' , helper.authenticateToken , async (req , res) => {
   const {categoryId , category_name , description , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);

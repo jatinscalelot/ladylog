@@ -12,7 +12,7 @@ const upload = require('../../utilities/multer.functions');
 const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
 
-router.get('/' , helper.authenticateToken , async (req , res) => {
+router.post('/' , helper.authenticateToken , async (req , res) => {
   const {pagination , page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
@@ -36,7 +36,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
           return responseManager.onError(error, res);
         });
       }else{
-        let sizes = await primary.model(constants.MODELS.remindermasters, reminderMasterModel).find({status: true}).select('_id reminder_name image').lean();
+        let sizes = await primary.model(constants.MODELS.remindermasters, reminderMasterModel).find({status: true}).select('_id reminder_name image description status').lean();
         return responseManager.onSuccess('List of all reminder...!' , sizes , res);
       }
     }else{
@@ -47,8 +47,8 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.get('/reminder', helper.authenticateToken, async (req , res) => {
-  const {reminderId} = req.query;
+router.post('/getone', helper.authenticateToken, async (req , res) => {
+  const {reminderId} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
@@ -71,7 +71,7 @@ router.get('/reminder', helper.authenticateToken, async (req , res) => {
   }
 });
 
-router.post('/' , helper.authenticateToken , async (req , res) => {
+router.post('/save' , helper.authenticateToken , async (req , res) => {
   const {reminderId , reminder_name , image , description , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
