@@ -11,7 +11,6 @@ const productModel = require('../../models/admin/products.model');
 const upload = require('../../utilities/multer.functions');
 const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
-const { post } = require('../../models/admin/story.model');
 
 router.get('/' , helper.authenticateToken , async (req , res) => {
   const {page , limit , search} = req.body;
