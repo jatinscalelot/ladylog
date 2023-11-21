@@ -11,19 +11,30 @@ const productModel = require('../../models/admin/products.model');
 const upload = require('../../utilities/multer.functions');
 const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
+const { post } = require('../../models/admin/story.model');
 
 router.get('/' , helper.authenticateToken , async (req , res) => {
+  const {page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
-      const activeProducts = await primary.model(constants.MODELS.products , productModel).find({active: true , status: true}).select('-createdBy -updatedBy -createdAt -updatedAt -__v -status').lean();
-      const notActiveProducts = await primary.model(constants.MODELS.products , productModel).find({active: false , status: true}).select('-createdBy -updatedBy -createdAt -updatedAt -__v -status').lean();
-      let data = {
-        activeProducts: activeProducts,
-        notActiveProducts: notActiveProducts
-      }
-      return responseManager.onSuccess('All products details...!' , data , res);
+      await primary.model(constants.MODELS.products, productModel).paginate({
+        $or: [
+          {title: {$regex: search, $options: 'i'}}
+        ],
+        status: false
+      },{
+        page,
+        limit: parseInt(limit),
+        select: '_id title image price active',
+        sort: {createdAt: -1},
+        lean: true
+      }).then((products) => {
+        return responseManager.onSuccess('Products details...!', products, res);
+      }).catch((error) => {
+        return responseManager.onError(error, res);
+      });
     }else{
       return responseManager.badrequest({ message: 'Invalid toke to get admin, Please try again.' } , res);
     }
@@ -33,14 +44,14 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
 });
 
 router.get('/product' , helper.authenticateToken , async (req , res) => {
-  const {productId} = req.body;
+  const {productId} = req.query;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
         let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
-        if(productData && productData != null && productData.status === true){
+        if(productData && productData != null && productData.status === false){
           return responseManager.onSuccess('Product details...!' , productData , res);
         }else{
           return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
@@ -151,6 +162,36 @@ router.post('/productImages' , helper.authenticateToken , upload.single('product
   }
 });
 
+router.post('/editActive', helper.authenticateToken, async (req, res) => {
+  const {productId} = req.body;
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+    if(adminData && adminData != null){
+      if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
+        let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
+        if(productData && productData != null && productData.status === false){
+          let obj = {
+            active: (productData.active) ? false : true,
+            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+            updatedAt: new Date()
+          };
+          let updateProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id, obj, {returnOriginal: false}).lean();
+          return responseManager.onSuccess('Product data update successfully...!', 1, res);
+        }else{
+          return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
+        }
+      }else{
+        return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);  
+      }
+    }else{
+      return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+  }else{
+    return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+  }
+});
+
 router.post('/deleteProduct' , helper.authenticateToken , async (req , res) => {
   const {productId} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
@@ -159,9 +200,9 @@ router.post('/deleteProduct' , helper.authenticateToken , async (req , res) => {
     if(adminData && adminData != null){
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
         let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).lean();
-        if(productData && productData != null && productData.status === true){
+        if(productData && productData != null && productData.status === false){
           let obj = {
-            status: false,
+            status: true,
             updatedBy: adminData._id,
             updatedAt: new Date()
           };

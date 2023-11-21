@@ -36,7 +36,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
         return responseManager.onSuccess('symptoms data...!' , symptoms.docs , res);
       }).catch((error) => {
         return responseManager.onError(error, res);
-      })
+      });
     }else{
       return responseManager.badrequest({ message: 'Invalid token to get admin, Please try again.' } , res);
     }

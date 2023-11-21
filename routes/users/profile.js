@@ -12,7 +12,7 @@ router.get('/', helper.authenticateToken, async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).select('_id name mobile dob goal period_days period_start_date period_end_date').lean();
         if (userData && userData != null) {
             return responseManager.onSuccess('User profile', userData, res);
         } else {

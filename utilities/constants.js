@@ -4,10 +4,13 @@ let constants = {
         admins: 'admins',
         users: 'users',
         symptoms: 'symptoms',
+        symptomMasters: 'symptomMasters',
         usersymptoms: 'usersymptoms',
         mycycles: 'mycycles',
         products: 'products',
-        stories: 'stories'
+        storymasters: 'storymasters',
+        stories: 'stories',
+        sizemasters: 'sizemasters'
     }
 };
 module.exports = constants;

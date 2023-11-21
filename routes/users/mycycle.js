@@ -18,7 +18,6 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
         if(userData && userData != null){
             const currentTimestamp = Date.now();
             if(currentTimestamp > userData.period_end_date){
-                console.log('if part...!');
                 let obj = {
                     period_start_date: userData.period_start_date,
                     period_end_date: userData.period_end_date,
