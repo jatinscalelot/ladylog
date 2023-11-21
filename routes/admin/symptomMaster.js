@@ -10,27 +10,32 @@ const adminModel = require('../../models/admin/admin.model');
 const symptomMasterModel = require('../../models/admin/symptom.master');
 
 router.get('/', helper.authenticateToken, async (req , res) => {
-  const {page , limit , search} = req.body;
+  const {pagination , page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id);
     if(adminData && adminData != null){
-      await primary.model(constants.MODELS.symptomMasters, symptomMasterModel).paginate({
-        $or: [
-          {category_name: {$regex: search, $options: 'i'}}
-        ],
-        status: true
-      },{
-        page,
-        limit: parseInt(limit),
-        select: '_id category_name color description status',
-        sort: {createdAt: -1},
-        lean: true
-      }).then((symptomCategories) => {
-        return responseManager.onSuccess('Symptom categories...!', symptomCategories, res);
-      }).catch((error) => {
-        return responseManager.onError(error, res)
-      });
+      if(pagination === true){
+        await primary.model(constants.MODELS.symptomMasters, symptomMasterModel).paginate({
+          $or: [
+            {category_name: {$regex: search, $options: 'i'}}
+          ],
+          status: true
+        },{
+          page,
+          limit: parseInt(limit),
+          select: '_id category_name color description status',
+          sort: {createdAt: -1},
+          lean: true
+        }).then((symptomCategories) => {
+          return responseManager.onSuccess('Symptom categories...!', symptomCategories, res);
+        }).catch((error) => {
+          return responseManager.onError(error, res)
+        });
+      }else{
+        let symptomCategories = await primary.model(constants.MODELS.symptomMasters, symptomMasterModel).find({status: true}).select('_id category_name').lean();
+        return responseManager.onSuccess('List of symptom category...!' , symptomCategories , res);
+      }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
     }

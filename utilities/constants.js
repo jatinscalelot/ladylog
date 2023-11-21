@@ -10,7 +10,8 @@ let constants = {
         products: 'products',
         storymasters: 'storymasters',
         stories: 'stories',
-        sizemasters: 'sizemasters'
+        sizemasters: 'sizemasters',
+        remindermasters: 'remindermasters'
     }
 };
 module.exports = constants;

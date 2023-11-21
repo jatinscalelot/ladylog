@@ -10,27 +10,32 @@ const adminModel = require('../../models/admin/admin.model');
 const sizeMasterModel =  require('../../models/admin/size.master');
 
 router.get('/' , helper.authenticateToken , async (req , res) => {
-  const {page , limit , search} = req.body;
+  const {pagination , page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
-      await primary.model(constants.MODELS.sizemasters, sizeMasterModel).paginate({
-        $or: [
-          {size_name: {$regex: search, $options: 'i'}}
-        ],
-        status: true
-      },{
-        page,
-        limit: parseInt(limit),
-        select: '_id size_name description status',
-        sort: {createdAt: -1},
-        lean: true
-      }).then((sizes) => {
-        return responseManager.onSuccess('Sizes data...!', sizes, res);
-      }).catch((error) => {
-        return responseManager.onError(error, res);
-      });
+      if(pagination === true){
+        await primary.model(constants.MODELS.sizemasters, sizeMasterModel).paginate({
+          $or: [
+            {size_name: {$regex: search, $options: 'i'}}
+          ],
+          status: true
+        },{
+          page,
+          limit: parseInt(limit),
+          select: '_id size_name description status',
+          sort: {createdAt: -1},
+          lean: true
+        }).then((sizes) => {
+          return responseManager.onSuccess('Sizes data...!', sizes, res);
+        }).catch((error) => {
+          return responseManager.onError(error, res);
+        });
+      }else{
+        let sizes = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).find({status: true}).select('_id size_name').lean();
+        return responseManager.onSuccess('List of all sizes...!' , sizes , res);
+      }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
     }
