@@ -76,7 +76,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
       if(category_name && category_name.trim() != ''){
         if(categoryId && categoryId.trim() != '' && mongoose.Types.ObjectId.isValid(categoryId)){
           let storyCategory = await primary.model(constants.MODELS.storymasters, storyMasterModel).findById(categoryId).lean();
-          if(storyCategory && storyCategory != null && storyCategory.status === true){
+          if(storyCategory && storyCategory != null){
             let obj = {
               category_name: category_name,
               description: (description && description.trim() != '') ? description : '',

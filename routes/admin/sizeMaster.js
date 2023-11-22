@@ -76,7 +76,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
       if(size_name && size_name.trim() != ''){
         if(sizeId && sizeId.trim() != '' && mongoose.Types.ObjectId.isValid(sizeId)){
           let size = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(sizeId).lean();
-          if(size && size != null && size.status === true){
+          if(size && size != null){
             let obj = {
               size_name: size_name,
               description: (description && description.trim() != '') ? description : '',

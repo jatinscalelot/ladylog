@@ -80,7 +80,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
         if(image && image.trim() != ''){
           if(reminderId && reminderId.trim() != '' && mongoose.Types.ObjectId.isValid(reminderId)){
             let reminderData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(reminderId).lean();
-            if(reminderData && reminderData != null && reminderData.status === true){
+            if(reminderData && reminderData != null){
               let obj = {
                 reminder_name: reminder_name,
                 image: image,

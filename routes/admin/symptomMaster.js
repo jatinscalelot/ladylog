@@ -77,7 +77,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
         if(color && color.trim() != ''){
           if(categoryID && categoryID.trim() != '' && mongoose.Types.ObjectId.isValid(categoryID)){
             let symptomCategory = await primary.model(constants.MODELS.symptomMasters, symptomMasterModel).findById(categoryID).lean();
-            if(symptomCategory && symptomCategory != null && symptomCategory.status === true){
+            if(symptomCategory && symptomCategory != null){
               let obj = {
                 category_name: category_name,
                 color: color,
