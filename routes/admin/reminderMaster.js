@@ -22,8 +22,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
         await primary.model(constants.MODELS.remindermasters, reminderMasterModel).paginate({
           $or: [
             {reminder_name: {$regex: search, $options: 'i'}}
-          ],
-          status: true
+          ]
         },{
           page,
           limit: parseInt(limit),
@@ -36,7 +35,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           return responseManager.onError(error, res);
         });
       }else{
-        let sizes = await primary.model(constants.MODELS.remindermasters, reminderMasterModel).find({status: true}).select('_id reminder_name image description status').lean();
+        let sizes = await primary.model(constants.MODELS.remindermasters, reminderMasterModel).find().select('_id reminder_name image description status').lean();
         return responseManager.onSuccess('List of all reminder...!' , sizes , res);
       }
     }else{
@@ -55,7 +54,7 @@ router.post('/getone', helper.authenticateToken, async (req , res) => {
     if(adminData && adminData != null){
       if(reminderId && reminderId.trim() != '' && mongoose.Types.ObjectId.isValid(reminderId)){
         let reminderData = await primary.model(constants.MODELS.remindermasters, reminderMasterModel).findById(reminderId).select('_id reminder_name image description status').lean();
-        if(reminderData && reminderData != null && reminderData.status === true){
+        if(reminderData && reminderData != null){
           return responseManager.onSuccess('Reminder data...!', reminderData, res);
         }else{
           return responseManager.badrequest({message: 'Invalid id to get reminder data, Please try again...!'}, res);

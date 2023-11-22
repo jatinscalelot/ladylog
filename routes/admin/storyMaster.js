@@ -19,8 +19,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
         await primary.model(constants.MODELS.storymasters, storyMasterModel).paginate({
           $or: [
             {category_name: {$regex: search, $options: 'i'}}
-          ],
-          status: true
+          ]
         },{
           page,
           limit: parseInt(limit),
@@ -33,7 +32,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           return responseManager.onError(error, res)
         });
       }else{
-        let storyCategories = await primary.model(constants.MODELS.storymasters, storyMasterModel).find({status: true}).select('_id category_name description status').lean();
+        let storyCategories = await primary.model(constants.MODELS.storymasters, storyMasterModel).find().select('_id category_name description status').lean();
         return responseManager.onSuccess('List of story category...!' , storyCategories , res);
       }
     }else{
@@ -52,7 +51,7 @@ router.post('/getone', helper.authenticateToken, async (req , res) => {
     if(adminData && adminData != null){
       if(categoryID && categoryID.trim() != '' && mongoose.Types.ObjectId.isValid(categoryID)){
         let storyCategory = await primary.model(constants.MODELS.storymasters, storyMasterModel).findById(categoryID).select('_id category_name description status').lean();
-        if(storyCategory && storyCategory != null && storyCategory.status === true){
+        if(storyCategory && storyCategory != null){
           return responseManager.onSuccess('Story category data...!', storyCategory, res);
         }else{
           return responseManager.badrequest({message: 'Invalid id to get story category, Please try again...!'}, res);

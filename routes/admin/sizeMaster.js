@@ -19,8 +19,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
         await primary.model(constants.MODELS.sizemasters, sizeMasterModel).paginate({
           $or: [
             {size_name: {$regex: search, $options: 'i'}}
-          ],
-          status: true
+          ]
         },{
           page,
           limit: parseInt(limit),
@@ -33,7 +32,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           return responseManager.onError(error, res);
         });
       }else{
-        let sizes = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).find({status: true}).select('_id size_name description status').lean();
+        let sizes = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).find().select('_id size_name description status').lean();
         return responseManager.onSuccess('List of all sizes...!' , sizes , res);
       }
     }else{
@@ -52,7 +51,7 @@ router.post('/getone', helper.authenticateToken, async (req , res) => {
     if(adminData && adminData != null){
       if(sizeId && sizeId.trim() != '' && mongoose.Types.ObjectId.isValid(sizeId)){
         let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(sizeId).select('_id size_name description status').lean();
-        if(sizeData && sizeData != null && sizeData.status === true){
+        if(sizeData && sizeData != null){
           return responseManager.onSuccess('Size data...!', sizeData, res);
         }else{
           return responseManager.badrequest({message: 'Invalid id to get size, Please try again...!'}, res);
