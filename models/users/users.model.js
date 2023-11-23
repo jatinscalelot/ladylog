@@ -3,7 +3,7 @@ let mongoosePaginate = require("mongoose-paginate-v2");
 let schema = new mongoose.Schema({
 	mobile: {
 		type: String,
-		require: true
+		default: ''
 	},
 	profile_pic: {
 		type: String,
@@ -43,7 +43,15 @@ let schema = new mongoose.Schema({
 	},
 	status: {
 		type: Boolean,
-		default: false
+		default: true
+	},
+	is_parent: {
+		type: Boolean,
+		default: true
+	},
+	parentId: {
+		type: mongoose.Types.ObjectId,
+		default: null
 	},
 	createdBy: {
 		type: mongoose.Types.ObjectId,

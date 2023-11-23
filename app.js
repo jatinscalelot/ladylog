@@ -50,6 +50,7 @@ adminpaths.forEach((path) => {
 
 const userpaths = [
   { pathUrl: '/login', routerFile: 'login' },
+  { pathUrl: '/account', routerFile: 'account' },
   { pathUrl: '/upload', routerFile: 'profilePic' },
   { pathUrl: '/profile', routerFile: 'profile' },
   { pathUrl: '/mycycle', routerFile: 'mycycle' },
