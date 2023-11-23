@@ -69,7 +69,6 @@ router.post('/getone', helper.authenticateToken, async (req , res) => {
 
 router.post('/save' , helper.authenticateToken , async (req , res) => {
   const {categoryID , category_name , color , description , status} = req.body;
-  console.log("categoryID :",categoryID);
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
@@ -78,9 +77,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
         if(color && color.trim() != ''){
           if(categoryID && categoryID.trim() != '' && mongoose.Types.ObjectId.isValid(categoryID)){
             let symptomCategory = await primary.model(constants.MODELS.symptomMasters, symptomMasterModel).findById(categoryID).lean();
-            console.log('symptomCategory :',symptomCategory);
             if(symptomCategory && symptomCategory != null){
-              console.log('Inside if symptomCategory :',symptomCategory);
               let obj = {
                 category_name: category_name,
                 color: color,
