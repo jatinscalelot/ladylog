@@ -32,7 +32,7 @@ router.post('/', helper.authenticateToken, async (req , res) => {
           return responseManager.onError(error, res)
         });
       }else{
-        let symptomCategories = await primary.model(constants.MODELS.symptomMasters, symptomMasterModel).find().select('_id category_name color description status').lean();
+        let symptomCategories = await primary.model(constants.MODELS.symptomMasters, symptomMasterModel).find({status: true}).select('_id category_name status').lean();
         return responseManager.onSuccess('List of symptom category...!' , symptomCategories , res);
       }
     }else{

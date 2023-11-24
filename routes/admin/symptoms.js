@@ -8,32 +8,29 @@ const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
 const symptomModel = require('../../models/admin/symptoms.model');
+const symptomMasterModel = require('../../models/admin/symptom.master');
 const upload = require('../../utilities/multer.functions');
 const aws = require('../../utilities/aws');
 
-function formatString(input) {
-  const words = input.replace(/_/g, ' ').split(' ');
-  const capitalizedWords = words.map(word => word.charAt(0).toUpperCase() + word.slice(1));
-  const formattedString = capitalizedWords.join(' ');
-  return formattedString;
-};
-
-router.get('/' , helper.authenticateToken , async (req , res) => {
-  const {page , limit} = req.body;
+router.post('/' , helper.authenticateToken , async (req , res) => {
+  const {page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let admin = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id);
     if(admin && admin != null){
       await primary.model(constants.MODELS.symptoms, symptomModel).paginate({
-        status: true
+        $or: [
+          {category_name: {$regex: search, $options: 'i'}},
+          {symptom_name: {$regex: search, $options: 'i'}}
+        ]
       },{
         page,
         limit: parseInt(limit),
-        select: '_id type header_name symptom_name fill_icon unfill_icon status',
+        select: '_id categoryId category_name symptom_name fill_icon unfill_icon status',
         sort: {createdAt: -1},
         lean: true
       }).then((symptoms) => {
-        return responseManager.onSuccess('symptoms data...!' , symptoms.docs , res);
+        return responseManager.onSuccess('symptoms data...!' , symptoms , res);
       }).catch((error) => {
         return responseManager.onError(error, res);
       });
@@ -45,15 +42,15 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.get('/symptom' , helper.authenticateToken , async (req , res) => {
+router.post('/getone' , helper.authenticateToken , async (req , res) => {
   const {symptomID} = req.body;
   if(req.token._id  && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(symptomID && symptomID.trim() != '' && mongoose.Types.ObjectId.isValid(symptomID)){
-        let symptom = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomID).select('_id type header_name symptom_name fill_icon unfill_icon status').lean();
-        if(symptom && symptom != null && symptom.status === true){
+        let symptom = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomID).select('_id categoryId category_name symptom_name fill_icon unfill_icon status').lean();
+        if(symptom && symptom != null){
           return responseManager.onSuccess('Symptom data...!', symptom , res);
         }else{
           return responseManager.badrequest({message: 'Invalid symptomID to get symptom, Please try again...!'}, res);
@@ -69,57 +66,63 @@ router.get('/symptom' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.post('/' , helper.authenticateToken , async (req , res) => {
-  const headers = ['birth_control' , 'pain' , 'bleeding_flow' , 'mood' , 'avg_sleep' , 'sexual_experience'];
-  const {symptomID , header_name , symptom_name , fill_icon , unfill_icon} = req.body;
+router.post('/save' , helper.authenticateToken , async (req , res) => {
+  const {symptomID , symptomCategoryId , symptom_name , fill_icon , unfill_icon , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
-      if(header_name && header_name.trim() != '' && headers.includes(header_name)){
-        if(symptom_name && symptom_name.trim() != ''){
-          if(fill_icon && fill_icon.trim() != ''){
-            if(unfill_icon && unfill_icon.trim() != ''){
-              if(symptomID && symptomID.trim() != '' && mongoose.Types.ObjectId.isValid(symptomID)){
-                let symptom = await primary.model(constants.MODELS.symptoms , symptomModel).findById(symptomID).lean();
-                if(symptom && symptom != null){
-                  let obj = {
-                    type: header_name,
-                    header_name: formatString(header_name),
-                    symptom_name: symptom_name,
-                    unfill_icon: unfill_icon.trim(),
-                    fill_icon: fill_icon.trim(),
-                    updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                    updatedAt: new Date()
-                  };
-                  const updatedSymptom =  await primary.model(constants.MODELS.symptoms , symptomModel).findByIdAndUpdate(symptom._id , obj , {returnOriginal: false});
-                  return responseManager.onSuccess('Symptom data updated successfully...!' , 1 , res);
+      if(symptomCategoryId && symptomCategoryId.trim() != '' && mongoose.Types.ObjectId.isValid(symptomCategoryId)){
+        let symptomCategory = await primary.model(constants.MODELS.symptomMasters, symptomMasterModel).findById(symptomCategoryId).lean();
+        if(symptomCategory && symptomCategory != null && symptomCategory.status === true){
+          if(symptom_name && symptom_name.trim() != ''){
+            if(fill_icon && fill_icon.trim() != ''){
+              if(unfill_icon && unfill_icon.trim() != ''){
+                if(symptomID && symptomID.trim() != '' && mongoose.Types.ObjectId.isValid(symptomID)){
+                  let symptom = await primary.model(constants.MODELS.symptoms , symptomModel).findById(symptomID).lean();
+                  if(symptom && symptom != null){
+                    let obj = {
+                      categoryId: new mongoose.Types.ObjectId(symptomCategory._id),
+                      category_name: symptomCategory.category_name,
+                      symptom_name: symptom_name,
+                      unfill_icon: unfill_icon.trim(),  
+                      fill_icon: fill_icon.trim(),
+                      status: (status === false) ? status : true,
+                      updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                      updatedAt: new Date()
+                    };
+                    const updatedSymptom =  await primary.model(constants.MODELS.symptoms , symptomModel).findByIdAndUpdate(symptom._id , obj , {returnOriginal: false});
+                    return responseManager.onSuccess('Symptom data updated successfully...!' , 1 , res);
+                  }else{
+                    return responseManager.badrequest({message: 'Invalid symptomID to update symptom data, Please try again...!'} , res);
+                  }
                 }else{
-                  return responseManager.badrequest({message: 'Invalid symptomID to update symptom data, Please try again...!'} , res);
+                  let obj = {
+                    categoryId: new mongoose.Types.ObjectId(symptomCategory._id),
+                    category_name: symptomCategory.category_name,
+                    symptom_name: symptom_name,
+                    unfill_icon: unfill_icon.trim(),  
+                    fill_icon: fill_icon.trim(),
+                    status: (status === false) ? status : true,
+                    createdBy: new mongoose.Types.ObjectId(adminData._id)
+                  };
+                  const newSymptom = await primary.model(constants.MODELS.symptoms , symptomModel).create(obj);
+                  return responseManager.onSuccess('New symptom add successfully...!' , 1 , res);
                 }
               }else{
-                let obj = {
-                  type: header_name,
-                  header_name: formatString(header_name),
-                  symptom_name: symptom_name,
-                  unfill_icon: unfill_icon.trim(),
-                  fill_icon: fill_icon.trim(),
-                  createdBy: new mongoose.Types.ObjectId(adminData._id)
-                };
-                const newSymptom = await primary.model(constants.MODELS.symptoms , symptomModel).create(obj);
-                return responseManager.onSuccess('New symptom add successfully...!' , 1 , res);
+                return responseManager.badrequest({message: 'Please select unfill icon...!'} , res);
               }
             }else{
-              return responseManager.badrequest({message: 'Please select unfill icon...!'} , res);
+              return responseManager.badrequest({message: 'Please select fill icon...!'} , res);
             }
           }else{
-            return responseManager.badrequest({message: 'Please select fill icon...!'} , res);
+            return responseManager.badrequest({message: 'Invalid sysmtop name, Please try again...!'} , res);
           }
         }else{
-          return responseManager.badrequest({message: 'Invalid sysmtop name, Please try again...!'} , res);
+          return responseManager.badrequest({message: 'Invalid id to get symptom category, Please try again...!'})
         }
       }else{
-        return responseManager.badrequest({message: 'Invalid header name, Please try again...!'} , res);
+        return responseManager.badrequest({message: 'Invalid id to get symptom category, Please try again...!'}, res);
       }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'} , res);

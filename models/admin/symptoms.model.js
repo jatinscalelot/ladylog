@@ -1,11 +1,11 @@
 let mongoose = require("mongoose");
 let mongoosePaginate = require("mongoose-paginate-v2");
 let schema = new mongoose.Schema({
-	header_name: {
-		type: String,
+	categoryId: {
+		type: mongoose.Types.ObjectId,
 		require: true
 	},
-	type: {
+	category_name: {
 		type: String,
 		require: true
 	},
