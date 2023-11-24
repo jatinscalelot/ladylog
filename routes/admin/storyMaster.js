@@ -32,7 +32,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           return responseManager.onError(error, res)
         });
       }else{
-        let storyCategories = await primary.model(constants.MODELS.storymasters, storyMasterModel).find().select('_id category_name description status').lean();
+        let storyCategories = await primary.model(constants.MODELS.storymasters, storyMasterModel).find({status: true}).select('_id category_name description status').lean();
         return responseManager.onSuccess('List of story category...!' , storyCategories , res);
       }
     }else{

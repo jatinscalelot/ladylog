@@ -32,7 +32,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           return responseManager.onError(error, res);
         });
       }else{
-        let sizes = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).find().select('_id size_name description status').lean();
+        let sizes = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).find({status: true}).select('_id size_name description status').lean();
         return responseManager.onSuccess('List of all sizes...!' , sizes , res);
       }
     }else{

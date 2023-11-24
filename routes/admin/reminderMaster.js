@@ -35,7 +35,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           return responseManager.onError(error, res);
         });
       }else{
-        let sizes = await primary.model(constants.MODELS.remindermasters, reminderMasterModel).find().select('_id reminder_name image description status').lean();
+        let sizes = await primary.model(constants.MODELS.remindermasters, reminderMasterModel).find({status: true}).select('_id reminder_name image description status').lean();
         return responseManager.onSuccess('List of all reminder...!' , sizes , res);
       }
     }else{
