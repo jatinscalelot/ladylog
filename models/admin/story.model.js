@@ -1,15 +1,23 @@
 let mongoose = require("mongoose");
 let mongoosePaginate = require("mongoose-paginate-v2");
 let schema = new mongoose.Schema({
+	category: {
+		type: mongoose.Types.ObjectId,
+		require: true
+	},
+	author_name: {
+		type: String,
+		require: true
+	},
 	title: {
 		type: String,
 		require: true
 	},
-	header: {
+	header_image: {
 		type: String,
 		require: true
 	},
-	writer_name: {
+	main_description: {
 		type: String,
 		require: true
 	},

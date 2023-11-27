@@ -8,22 +8,28 @@ const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
 const storyModel = require('../../models/admin/story.model');
+const storyMasterModel = require('../../models/admin/story.master'); 
 const upload = require('../../utilities/multer.functions');
 const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
 
-router.get('/' , helper.authenticateToken , async (req , res) => {
-  const {page , limit} = req.body;
+router.post('/' , helper.authenticateToken , async (req , res) => {
+  const {page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       await primary.model(constants.MODELS.stories, storyModel).paginate({
-        status: true
+        $or: [
+          {author_name: {$regex: search, $options: 'i'}},
+          {title: {$regex: search, $options: 'i'}},
+        ]
       }, {
         page,
         limit: parseInt(limit),
         sort: {createdAt: -1},
+        populate: {path: 'category' , model: primary.model(constants.MODELS.storymasters, storyMasterModel) , select: '_id category_name'},
+        select: '-createdBy -updatedBy -__v -updatedAt',
         lean: true
       }).then((stories) => {
         return responseManager.onSuccess('Stories data...!', stories, res);
@@ -38,47 +44,111 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.post('/' , helper.authenticateToken , async (req , res) => {
-  const {title , header , writer_name , description , other_images} = req.body;
+router.post('/getone' , helper.authenticateToken , async (req , res) => {
+  const {storyID} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
-      if(title && title.trim() != ''){
-        if(writer_name && writer_name.trim() != ''){
-          if(header && header.trim() != ''){
-            if(description && description.trim() != ''){
-              let obj = {
-                title: title,
-                header: header,
-                writer_name: writer_name,
-                description: description,
-                other_images: (other_images) ? other_images : [],
-                createdBy: new mongoose.Types.ObjectId(adminData._id)
-              };
-              const newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
-              return responseManager.onSuccess('Story added successfully...!', 1 , res);
-            }else{
-              return responseManager.badrequest({message: 'Please provide description for story...!'}, res);
-            }
-          }else{
-            return responseManager.badrequest({message: 'Please select image/video for story...!'}, res);
-          }
+      if(storyID && storyID != '' && mongoose.Types.ObjectId.isValid(storyID)){
+        let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyID).select('-createdBy -updatedBy -__v -updatedAt').populate({
+          path: 'category',
+          model: primary.model(constants.MODELS.storymasters, storyMasterModel),
+          select: '_id category_name'
+        }).lean();
+        if(storyData && storyData != null){
+          return responseManager.onSuccess('Story deleted successfully...!', storyData, res);
         }else{
-          return responseManager.badrequest({message: 'Invalid writer name for story, Please try again...!'}, res);
+          return responseManager.badrequest({message: 'Invalid storyID to get story, Please try again...!'}, res);
         }
       }else{
-        return responseManager.badrequest({message: 'Invalid title name for story, Please try again...!'}, res);
+        return responseManager.badrequest({message: 'Invalid storyID to get story, Please try again...!'}, res);
       }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
     }
-  }else{
+  }else{ 
     return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
   }
 });
 
-router.post('/storyImages' , helper.authenticateToken , upload.single('storyImages') , async (req, res) => {
+router.post('/save' , helper.authenticateToken , async (req , res) => {
+  const {storyId , storyCategoryId , title , header_image , main_description , description , author_name, status} = req.body;
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+    if(adminData && adminData != null){
+      if(storyCategoryId && mongoose.Types.ObjectId.isValid(storyCategoryId)){
+        let storyCategory = await primary.model(constants.MODELS.storymasters, storyMasterModel).findById(storyCategoryId).lean();
+        if(storyCategory && storyCategory != null && storyCategory.status === true){
+          if(title && title.trim() != ''){
+            if(header_image && header_image.trim() != ''){
+              if(main_description && main_description.trim() != ''){
+                if(description && description.trim() != ''){
+                  if(author_name && author_name.trim() != ''){
+                    if(storyId && storyId.trim() != '' && mongoose.Types.ObjectId.isValid(storyId)){
+                      let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyId).lean();
+                      if(storyData && storyData != null){
+                        let obj = {
+                          category: new mongoose.Types.ObjectId(storyCategoryId),
+                          author_name: author_name,
+                          title: title,
+                          header_image: header_image,
+                          main_description: main_description.trim(),
+                          description: description.trim(),
+                          status: (status === false) ? status : true,
+                          updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                          updatedAt: new Date()
+                        };
+                        let updatedStoryData = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(storyData._id, obj, {returnOriginal: false}).lean();
+                        return responseManager.onSuccess('Story data updated successfully...!', 1, res);
+                      }else{
+                        return responseManager.badrequest({message: 'Invalid id to story data, Please try again...!'}, res);
+                      }
+                    }else{
+                      let obj = {
+                        category: new mongoose.Types.ObjectId(storyCategoryId),
+                        author_name: author_name,
+                        title: title,
+                        header_image: header_image,
+                        main_description: main_description.trim(),
+                        description: description.trim(),
+                        status: (status === false) ? status : true,
+                        createdBy: new mongoose.Types.ObjectId(adminData._id)
+                      };
+                      let newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
+                      return responseManager.onSuccess('Story added successfully...!' , 1 , res);
+                    }
+                  }else{
+                    return responseManager.badrequest({message: 'Provide author name for story...!'}, res);
+                  }
+                }else{
+                  return responseManager.badrequest({message: 'Provide desccription for story...!'}, res);
+                }
+              }else{
+                return responseManager.badrequest({message: 'Provide main description for story...!'}, res);
+              }
+            }else{
+              return responseManager.badrequest({message: 'Please select header image...1'}, res);
+            }
+          }else{
+            return responseManager.badrequest({message: 'Invalid title for story, Please try again...!'} , res);
+          }
+        }else{
+          return responseManager.badrequest({message: 'Invalid id to get story category, Please try again...!'} , res);
+        }
+      }else{
+        return responseManager.badrequest({message: 'Invalid id to get story category, Please try again...!'} , res);
+      }
+    }else{
+      return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'} , res);
+    }
+  }else{
+    return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'} , res);
+  }
+});
+
+router.post('/upload' , helper.authenticateToken , upload.single('storyImages') , async (req, res) => {
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
