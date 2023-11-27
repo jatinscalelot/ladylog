@@ -1,12 +1,8 @@
 let mongoose = require("mongoose");
 let mongoosePaginate = require("mongoose-paginate-v2");
 let schema = new mongoose.Schema({
-	categoryId: {
+	category: {
 		type: mongoose.Types.ObjectId,
-		require: true
-	},
-	category_name: {
-		type: String,
 		require: true
 	},
 	symptom_name: {

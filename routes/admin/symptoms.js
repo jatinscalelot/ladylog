@@ -20,14 +20,14 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
     if(admin && admin != null){
       await primary.model(constants.MODELS.symptoms, symptomModel).paginate({
         $or: [
-          {category_name: {$regex: search, $options: 'i'}},
           {symptom_name: {$regex: search, $options: 'i'}}
         ]
       },{
         page,
         limit: parseInt(limit),
-        select: '_id categoryId category_name symptom_name fill_icon unfill_icon status',
+        select: '-createdAt -updatedAt -__v -createdBy -updatedBy',
         sort: {createdAt: -1},
+        populate: {path: 'category' , model: primary.model(constants.MODELS.symptomMasters, symptomMasterModel) , select: '_id category_name'},
         lean: true
       }).then((symptoms) => {
         return responseManager.onSuccess('symptoms data...!' , symptoms , res);
@@ -49,7 +49,11 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(symptomID && symptomID.trim() != '' && mongoose.Types.ObjectId.isValid(symptomID)){
-        let symptom = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomID).select('_id categoryId category_name symptom_name fill_icon unfill_icon status').lean();
+        let symptom = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomID).select('-createdAt -updatedAt -__v -createdBy -updatedBy').populate({
+          path: 'category',
+          model: primary.model(constants.MODELS.symptomMasters, symptomMasterModel),
+          select: '_id category_name'
+        }).lean();
         if(symptom && symptom != null){
           return responseManager.onSuccess('Symptom data...!', symptom , res);
         }else{
@@ -82,8 +86,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                   let symptom = await primary.model(constants.MODELS.symptoms , symptomModel).findById(symptomID).lean();
                   if(symptom && symptom != null){
                     let obj = {
-                      categoryId: new mongoose.Types.ObjectId(symptomCategory._id),
-                      category_name: symptomCategory.category_name,
+                      category: new mongoose.Types.ObjectId(symptomCategory._id),
                       symptom_name: symptom_name,
                       unfill_icon: unfill_icon.trim(),  
                       fill_icon: fill_icon.trim(),
@@ -98,8 +101,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                   }
                 }else{
                   let obj = {
-                    categoryId: new mongoose.Types.ObjectId(symptomCategory._id),
-                    category_name: symptomCategory.category_name,
+                    category: new mongoose.Types.ObjectId(symptomCategory._id),
                     symptom_name: symptom_name,
                     unfill_icon: unfill_icon.trim(),  
                     fill_icon: fill_icon.trim(),
