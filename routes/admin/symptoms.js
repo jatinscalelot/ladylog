@@ -121,7 +121,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
             return responseManager.badrequest({message: 'Invalid sysmtop name, Please try again...!'} , res);
           }
         }else{
-          return responseManager.badrequest({message: 'Invalid id to get symptom category, Please try again...!'})
+          return responseManager.badrequest({message: 'Invalid id to get symptom category, Please try again...!'}, res);
         }
       }else{
         return responseManager.badrequest({message: 'Invalid id to get symptom category, Please try again...!'}, res);
