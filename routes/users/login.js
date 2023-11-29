@@ -21,6 +21,8 @@ router.post('/', async (req, res) => {
                     user_id: decodedToken.user_id,
                     mobile: decodedToken.phone_number,
                     fcm_token: (fcm_token) ? fcm_token.trim() : '',
+                    is_parent: true,
+                    parentId: null,
                     exp: decodedToken.exp,
                     status: true
                 };
@@ -29,7 +31,7 @@ router.post('/', async (req, res) => {
                 let accessToken = await helper.generateAccessToken({ _id: newUser._id.toString()});
                 return responseManager.onSuccess('User register successfully!', { token: accessToken , is_profile_completed: updateUSer.is_profile_completed }, res);
             }else{
-                if(userData){
+                if(userData && userData && userData.is_parent === true){
                     let accessToken = await helper.generateAccessToken({ _id: userData._id.toString() });
                     return responseManager.onSuccess('User login successfully!', { token: accessToken , is_profile_completed: userData.is_profile_completed }, res);
                 }else{

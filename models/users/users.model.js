@@ -47,7 +47,7 @@ let schema = new mongoose.Schema({
 	},
 	is_parent: {
 		type: Boolean,
-		default: true
+		default: false
 	},
 	parentId: {
 		type: mongoose.Types.ObjectId,
