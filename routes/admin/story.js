@@ -182,22 +182,26 @@ router.post('/upload' , helper.authenticateToken , upload.single('storyImages') 
   }
 });
 
-router.post('/deleteStory' , helper.authenticateToken , async (req , res) => {
-  const {storyID} = req.body;
+router.post('/changeStatus' , helper.authenticateToken , async (req , res) => {
+  const {storyID , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(storyID && storyID != '' && mongoose.Types.ObjectId.isValid(storyID)){
         let story = await primary.model(constants.MODELS.stories, storyModel).findById(storyID).lean();
-        if(story && story != null && story.status === true){
-          let obj = {
-            status: false,
-            updatedBy: new mongoose.Types.ObjectId(adminData._id),
-            createdAt: new Date()
-          };
-          const updateStory = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(story._id, obj, {returnOriginal: false}).lean();
-          return responseManager.onSuccess('Story deleted successfully...!', 1, res);
+        if(story && story != null){
+          if(status === true || status === false){
+            let obj = {
+              status: status,
+              updatedBy: new mongoose.Types.ObjectId(adminData._id),
+              createdAt: new Date()
+            };
+            const updateStory = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(story._id, obj, {returnOriginal: false}).lean();
+            return responseManager.onSuccess('Story status changed successfully...!', 1, res);
+          }else{
+            return responseManager.badrequest({message: 'Invalid status, Please try again...!'} , res);
+          }
         }else{
           return responseManager.badrequest({message: 'Invalid storyID to get story, Please try again...!'}, res);
         }
