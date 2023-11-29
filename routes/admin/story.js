@@ -86,9 +86,27 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
               if(main_description && main_description.trim() != ''){
                 if(description && description.trim() != ''){
                   if(author_name && author_name.trim() != ''){
-                    if(storyId && storyId.trim() != '' && mongoose.Types.ObjectId.isValid(storyId)){
-                      let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyId).lean();
-                      if(storyData && storyData != null){
+                    if(status === true || status === false){
+                      if(storyId && storyId.trim() != '' && mongoose.Types.ObjectId.isValid(storyId)){
+                        let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyId).lean();
+                        if(storyData && storyData != null){
+                          let obj = {
+                            category: new mongoose.Types.ObjectId(storyCategoryId),
+                            author_name: author_name,
+                            title: title,
+                            header_image: header_image,
+                            main_description: main_description.trim(),
+                            description: description.trim(),
+                            status: status,
+                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                            updatedAt: new Date()
+                          };
+                          let updatedStoryData = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(storyData._id, obj, {returnOriginal: false}).lean();
+                          return responseManager.onSuccess('Story data updated successfully...!', 1, res);
+                        }else{
+                          return responseManager.badrequest({message: 'Invalid id to story data, Please try again...!'}, res);
+                        }
+                      }else{
                         let obj = {
                           category: new mongoose.Types.ObjectId(storyCategoryId),
                           author_name: author_name,
@@ -96,28 +114,14 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                           header_image: header_image,
                           main_description: main_description.trim(),
                           description: description.trim(),
-                          status: (status === false) ? status : true,
-                          updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                          updatedAt: new Date()
+                          status: status,
+                          createdBy: new mongoose.Types.ObjectId(adminData._id)
                         };
-                        let updatedStoryData = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(storyData._id, obj, {returnOriginal: false}).lean();
-                        return responseManager.onSuccess('Story data updated successfully...!', 1, res);
-                      }else{
-                        return responseManager.badrequest({message: 'Invalid id to story data, Please try again...!'}, res);
+                        let newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
+                        return responseManager.onSuccess('Story added successfully...!' , 1 , res);
                       }
                     }else{
-                      let obj = {
-                        category: new mongoose.Types.ObjectId(storyCategoryId),
-                        author_name: author_name,
-                        title: title,
-                        header_image: header_image,
-                        main_description: main_description.trim(),
-                        description: description.trim(),
-                        status: (status === false) ? status : true,
-                        createdBy: new mongoose.Types.ObjectId(adminData._id)
-                      };
-                      let newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
-                      return responseManager.onSuccess('Story added successfully...!' , 1 , res);
+                      return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
                     }
                   }else{
                     return responseManager.badrequest({message: 'Provide author name for story...!'}, res);
