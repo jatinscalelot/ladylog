@@ -8,11 +8,12 @@ const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
 const productModel = require('../../models/admin/products.model');
+const sizeMasterModel = require('../../models/admin/size.master');
 const upload = require('../../utilities/multer.functions');
 const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
 
-router.get('/' , helper.authenticateToken , async (req , res) => {
+router.post('/' , helper.authenticateToken , async (req , res) => {
   const {page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
@@ -21,12 +22,12 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
       await primary.model(constants.MODELS.products, productModel).paginate({
         $or: [
           {title: {$regex: search, $options: 'i'}}
-        ],
-        status: false
+        ]
       },{
         page,
         limit: parseInt(limit),
-        select: '_id title image price active',
+        select: '-createdBy -updatedBy -createdAt -__v',
+        populate: {path: 'productDetails.size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'},
         sort: {createdAt: -1},
         lean: true
       }).then((products) => {
@@ -42,15 +43,19 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.get('/product' , helper.authenticateToken , async (req , res) => {
-  const {productId} = req.query;
+router.post('/getone' , helper.authenticateToken , async (req , res) => {
+  const {productId} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
-        let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
-        if(productData && productData != null && productData.status === false){
+        let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -__v').populate({
+          path: 'productDetails.size',
+          model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
+          select: '_id size_name'
+        }).lean();
+        if(productData && productData != null){
           return responseManager.onSuccess('Product details...!' , productData , res);
         }else{
           return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
@@ -66,68 +71,82 @@ router.get('/product' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.post('/' , helper.authenticateToken , async (req , res) => {
-  const {productId , title , header_image , price , description , other_images , status} = req.body;
+router.post('/save' , helper.authenticateToken , async (req , res) => {
+  const {productId , title , bannerImage , description , SKUID , productDetails , otherImages , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-    let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
+    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(title && title.trim() != ''){
-        if(header_image && header_image.trim() != ''){
-          if(price && price > 0){
-            if(description && description.trim() != ''){
-              if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
-                let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).lean();
-                if(productData && productData != null && productData.status === true){
-                  let obj = {
-                    title: title,
-                    image: header_image,
-                    price: parseInt(price),
-                    description: description,
-                    other_images: other_images,
-                    status: status,
-                    updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                    updatedAt: new Date()
-                  };
-                  let updateProduct = await primary.model(constants.MODELS.products , productModel).findByIdAndUpdate(productData._id , obj , {returnOriginal: false});
-                  return responseManager.onSuccess('Product details updated successfully...!' , 1 , res);
+        if(bannerImage && bannerImage.trim() != ''){
+          if(description && description.trim() != ''){
+            if(SKUID && SKUID.trim() != ''){
+              if(productDetails && Array.isArray(productDetails) && productDetails.length > 0){
+                if(otherImages && Array.isArray(otherImages) && otherImages.length > 0){
+                  if(status === true || status === false){
+                    if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
+                      let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
+                      if(productData && productData != null){
+                        let obj = {
+                          title: title,
+                          bannerImage: bannerImage,
+                          description: description,
+                          SKUID: SKUID,
+                          productDetails: productDetails,
+                          otherImages: otherImages,
+                          status: status,
+                          updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                          updatedAt: new Date()
+                        };
+                        let updatedProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id , obj , {returnOriginal: false}).lean();
+                        return responseManager.onSuccess('Product data update successfully...!' , 1 , res);
+                      }else{
+                        return responseManager.badrequest({message: 'Invalid id to get product data, Please try again...!'}, res);
+                      }
+                    }else{
+                      let obj = {
+                        title: title,
+                        bannerImage: bannerImage,
+                        description: description,
+                        SKUID: SKUID,
+                        productDetails: productDetails,
+                        otherImages: otherImages,
+                        status: status,
+                        createdBy: new mongoose.Types.ObjectId(adminData._id)
+                      };
+                      let newProduct = await primary.model(constants.MODELS.products, productModel).create(obj);
+                      return responseManager.onSuccess('New product added successfully...!', 1, res);
+                    }
+                  }else{
+                    return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
+                  }
                 }else{
-                  return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
+                  return responseManager.badrequest({message: 'Please select at least one other image...!'}, res);
                 }
               }else{
-                let obj = {
-                  title: title,
-                  image: header_image,
-                  price: parseInt(price),
-                  description: description,
-                  other_images: other_images,
-                  status: status,
-                  createdBy: new mongoose.Types.ObjectId(adminData._id),
-                };
-                let newProduct = await primary.model(constants.MODELS.products , productModel).create(obj);
-                return responseManager.onSuccess('New product add successfully...!' , 1 , res);
+                return responseManager.badrequest({message: 'Please provide product details, Please try again...!'}, res);
               }
             }else{
-              return responseManager.badrequest({message: 'Please provide description for product...!'} , res);
+              return responseManager.badrequest({message: 'Please provide SKUID for product, Please try again...!'}, res);
             }
           }else{
-            return responseManager.badrequest({message: 'Invalid price for product, Please try again...!'} , res);
+            return responseManager.badrequest({message: 'Please provide description for product, Please try again...!'}, res);
           }
         }else{
-          return responseManager.badrequest({message: 'Invalid header image, Please try again...!'} , res);
+          return responseManager.badrequest({message: 'Please select banner image for product, Please try again...!'}, res);
         }
       }else{
-        return responseManager.badrequest({message: 'Invalid title name for product, Please try again...!'} , res);
+        return responseManager.badrequest({message: 'Invalid title for product, Please try again...!'}, res);
       }
     }else{
-      return responseManager.badrequest({ message: 'Invalid toke to get admin, Please try again...!' } , res);
+      return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
     }
   }else{
-    return responseManager.badrequest({ message: 'Invalid toke to get admin, Please try again...!' } , res);
+    return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
   }
 });
 
-router.post('/productImages' , helper.authenticateToken , upload.single('productImages') , async (req , res) => {
+router.post('/upload' , helper.authenticateToken , upload.single('productImages') , async (req , res) => {
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
@@ -161,57 +180,61 @@ router.post('/productImages' , helper.authenticateToken , upload.single('product
   }
 });
 
-router.post('/editActive', helper.authenticateToken, async (req, res) => {
-  const {productId} = req.body;
-  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
-    if(adminData && adminData != null){
-      if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
-        let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
-        if(productData && productData != null && productData.status === false){
-          let obj = {
-            active: (productData.active) ? false : true,
-            updatedBy: new mongoose.Types.ObjectId(adminData._id),
-            updatedAt: new Date()
-          };
-          let updateProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id, obj, {returnOriginal: false}).lean();
-          return responseManager.onSuccess('Product data update successfully...!', 1, res);
-        }else{
-          return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
-        }
-      }else{
-        return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);  
-      }
-    }else{
-      return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-    }
-  }else{
-    return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-  }
-});
+// router.post('/editActive', helper.authenticateToken, async (req, res) => {
+//   const {productId} = req.body;
+//   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+//     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+//     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+//     if(adminData && adminData != null){
+//       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
+//         let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
+//         if(productData && productData != null && productData.status === false){
+//           let obj = {
+//             active: (productData.active) ? false : true,
+//             updatedBy: new mongoose.Types.ObjectId(adminData._id),
+//             updatedAt: new Date()
+//           };
+//           let updateProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id, obj, {returnOriginal: false}).lean();
+//           return responseManager.onSuccess('Product data update successfully...!', 1, res);
+//         }else{
+//           return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
+//         }
+//       }else{
+//         return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);  
+//       }
+//     }else{
+//       return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+//     }
+//   }else{
+//     return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+//   }
+// });
 
-router.post('/deleteProduct' , helper.authenticateToken , async (req , res) => {
-  const {productId} = req.body;
+router.post('/changeStatus' , helper.authenticateToken , async (req , res) => {
+  const {productId , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
         let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).lean();
-        if(productData && productData != null && productData.status === false){
-          let obj = {
-            status: true,
-            updatedBy: adminData._id,
-            updatedAt: new Date()
-          };
-          let updateProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id , obj);
-          return responseManager.onSuccess('Product deleted successfully...!' , 1 , res);
+        if(productData && productData != null){
+          if(status === true || status === false){
+            let obj = {
+              status: status,
+              updatedBy: adminData._id,
+              updatedAt: new Date()
+            };
+            let updateProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id , obj , {returnOriginal: false}).lean();
+            return responseManager.onSuccess('Product status changed successfully...!' , 1 , res);
+          }else{
+            return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
+          }
         }else{
-          return responseManager.badrequest({message: 'Invalid productId to get product details, Please try again...!'} , res);
+          return responseManager.badrequest({message: 'Invalid id to get product, Please try again...!'} , res);
         }
       }else{
-        return responseManager.badrequest({message: 'Invalid productId to get product details, Please try again...!'} , res);
+        return responseManager.badrequest({message: 'Invalid id to get product, Please try again...!'} , res);
       }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'} , res);
