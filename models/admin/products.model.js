@@ -12,6 +12,34 @@ let productDetails = new mongoose.Schema({
 	price: {
 		type: Number,
 		require: true
+	},
+	sgst: {
+		type: Number,
+		require: true
+	},
+	cgst: {
+		type: Number,
+		require: true
+	},
+	gross_amount: {
+		type: Number,
+		require: true
+	},
+	discount_per: {
+		type: Number,
+		require: true
+	},
+	discount_amount: {
+		type: Number,
+		require: true
+	},
+	discount: {
+		type: Number,
+		require: true
+	},
+	discounted_amount: {
+		type: Number,
+		require: true
 	}
 });
 let otherImages = new mongoose.Schema({
@@ -39,6 +67,10 @@ let schema = new mongoose.Schema({
 	},
 	productDetails: [productDetails],
 	otherImages: [otherImages],
+	cod: {
+		type: Boolean,
+		default: false
+	},
 	status: {
 		type:Boolean,
 		default: false

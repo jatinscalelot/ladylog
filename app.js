@@ -58,6 +58,7 @@ const userpaths = [
   { pathUrl: '/getSymptoms', routerFile: 'getSymptoms' },
   { pathUrl: '/history', routerFile: 'history' },
   { pathUrl: '/products', routerFile: 'product' },
+  { pathUrl: '/review', routerFile: 'review' },
 ];
 userpaths.forEach((path) => {
   app.use('/user' + path.pathUrl, require('./routes/users/' + path.routerFile));
