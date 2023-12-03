@@ -52,18 +52,15 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             let noofreview = parseInt(await primary.model(constants.MODELS.reviews, reviewModel).countDocuments({product: product._id}));
             if(noofreview > 0){
               let totalReviewsCountObj = await primary.model(constants.MODELS.reviews, reviewModel).aggregate([{$match: {product: product._id}} , {$group: {_id: null , sum: {$sum: '$rating'}}}]);
-              if(totalReviewsCountObj && totalReviewsCountObj.length > 0 && totalReviewsCountObj[o].sum){
+              if(totalReviewsCountObj && totalReviewsCountObj.length > 0 && totalReviewsCountObj[0].sum){
                 product.ratings = totalReviewsCountObj[0].sum / noofreview;
-                console.log(product);
-                next_product();
               }else{
                 product.ratings = 0.0
-                next_product();
               }
             }else{
               product.ratings = 0.0;
-              next_product();
             }
+            next_product();
           })().catch((error) => { });
         }, () => {
           return responseManager.onSuccess('Products details...!', products, res);
