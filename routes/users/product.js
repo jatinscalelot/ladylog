@@ -37,7 +37,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             if(noofreview > 0){
               let totalReviewsCountObj = await primary.model(constants.MODELS.reviews, reviewModel).aggregate([{$match: {product: product._id}} , {$group: {_id: null , sum: {$sum: '$rating'}}}]);
               if(totalReviewsCountObj && totalReviewsCountObj.length > 0 && totalReviewsCountObj[0].sum){
-                product.ratings = totalReviewsCountObj[0].sum / noofreview;
+                product.ratings = parseFloat((totalReviewsCountObj[0].sum / noofreview).toFixed(1));
               }else{
                 product.ratings = 0.0
               }
@@ -73,6 +73,17 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
           select: '_id size_name'
         }).lean();
         if(productData && productData != null && productData.status === true){
+          let noofreview = parseInt(await primary.model(constants.MODELS.reviews, reviewModel).countDocuments({product: productData._id}));
+          if(noofreview > 0){
+            let totalReviewsCountObj = await primary.model(constants.MODELS.reviews, reviewModel).aggregate([{$match: {product: productData._id}} , {$group: {_id: null , sum: {$sum: '$rating'}}}]);
+            if(totalReviewsCountObj && totalReviewsCountObj.length > 0 && totalReviewsCountObj[0].sum){
+              productData.ratings = parseFloat((totalReviewsCountObj[0].sum / noofreview).toFixed(1));
+            }else{
+              productData.ratings = 0.0
+            }
+          }else{
+            productData.ratings = 0.0;
+          }
           return responseManager.onSuccess('Product details...!' , productData , res);
         }else{
           return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
