@@ -8,6 +8,8 @@ let constants = {
         usersymptoms: 'usersymptoms',
         mycycles: 'mycycles',
         products: 'products',
+        variants: 'variants',
+        carts: 'carts',
         reviews: 'reviews',
         storymasters: 'storymasters',
         stories: 'stories',
