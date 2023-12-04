@@ -25,7 +25,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
         return responseManager.onSuccess('Child accounts details...!', Accounts , res);
       }else{
         let parentAccount = await primary.model(constants.MODELS.users, userModel).findById(userData.parentId).select('_id name is_parent').lean();
-        let Accounts = await primary.model(constants.MODELS.users, userModel).find({parentId: userData._id , status: true}).select('_id name is_parent').lean();
+        let Accounts = await primary.model(constants.MODELS.users, userModel).find({parentId: parentAccount._id , status: true}).select('_id name is_parent').lean();
         Accounts.push(parentAccount);
         return responseManager.onSuccess('All Accounts data...!', Accounts, res);
       }
