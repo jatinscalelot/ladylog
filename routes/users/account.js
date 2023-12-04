@@ -20,20 +20,14 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
           name: userData.name,
           is_parent: userData.is_parent
         };
-        let childAccounts = await primary.model(constants.MODELS.users, userModel).find({parentId: userData._id , status: true}).select('_id name is_parent').lean();
-        let data = {
-          parentAccount: parentAccount,
-          childAccounts: childAccounts
-        };
-        return responseManager.onSuccess('Child accounts details...!', data , res);
+        let Accounts = await primary.model(constants.MODELS.users, userModel).find({parentId: userData._id , status: true}).select('_id name is_parent').lean();
+        Accounts.push(parentAccount);
+        return responseManager.onSuccess('Child accounts details...!', Accounts , res);
       }else{
         let parentAccount = await primary.model(constants.MODELS.users, userModel).findById(userData.parentId).select('_id name is_parent').lean();
-        let childAccounts = await primary.model(constants.MODELS.users, userModel).find({parentId: userData._id , status: true}).select('_id name is_parent').lean();
-        let data = {
-          parentAccount: parentAccount,
-          childAccounts: childAccounts
-        };
-        return responseManager.onSuccess('All Accounts data...!', data, res);
+        let Accounts = await primary.model(constants.MODELS.users, userModel).find({parentId: userData._id , status: true}).select('_id name is_parent').lean();
+        Accounts.push(parentAccount);
+        return responseManager.onSuccess('All Accounts data...!', Accounts, res);
       }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
