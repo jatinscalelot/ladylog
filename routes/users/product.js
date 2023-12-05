@@ -33,7 +33,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
       }).then((products) => {
         async.forEachSeries(products.docs, (product, next_product) => {
           (async () => {
-            let productVariants = await primary.model(constants.MODELS.variants, variantModel).find({product: product._id , status: true}).select('-product -status -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
+            let productVariants = await primary.model(constants.MODELS.variants, variantModel).find({product: product._id , status: true}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
               path: 'size',
               model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
               select: '_id size_name'
@@ -75,7 +75,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
         let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
         if(productData && productData != null && productData.status === true){
-          let productVariants = await primary.model(constants.MODELS.variants, variantModel).find({product: productData._id}).select('-product -status -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
+          let productVariants = await primary.model(constants.MODELS.variants, variantModel).find({product: productData._id , status: true}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
             path: 'size',
             model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
             select: '_id size_name'
