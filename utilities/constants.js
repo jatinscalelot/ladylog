@@ -13,6 +13,7 @@ let constants = {
         reviews: 'reviews',
         storymasters: 'storymasters',
         stories: 'stories',
+        savedstories: 'savedstories',
         sizemasters: 'sizemasters',
         remindermasters: 'remindermasters'
     }

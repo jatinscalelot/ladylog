@@ -57,7 +57,9 @@ const userpaths = [
   { pathUrl: '/symptoms', routerFile: 'AddandGetUserSymptoms' },
   { pathUrl: '/getSymptoms', routerFile: 'getSymptoms' },
   { pathUrl: '/history', routerFile: 'history' },
+  { pathUrl: '/stories', routerFile: 'story' },
   { pathUrl: '/products', routerFile: 'product' },
+  { pathUrl: '/cart', routerFile: 'cart' },
   { pathUrl: '/review', routerFile: 'review' },
 ];
 userpaths.forEach((path) => {
