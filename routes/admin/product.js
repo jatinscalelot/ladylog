@@ -9,6 +9,7 @@ const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
 const userModel = require('../../models/users/users.model');
 const productModel = require('../../models/admin/products.model');
+const variantModel = require('../../models/admin/variants.model');
 const reviewModel = require('../../models/users/review.model');
 const sizeMasterModel = require('../../models/admin/size.master');
 const upload = require('../../utilities/multer.functions');
@@ -21,12 +22,17 @@ function getAverage(sum , len){
   return sum/len;
 };
 
-function checkProductDetail(productDetail){
-  if(productDetail.size && productDetail.size.trim() != '' && mongoose.Types.ObjectId.isValid(productDetail.size) && productDetail.stock && !isNaN(productDetail.stock) && productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0 && productDetail.discount_per && !isNaN(productDetail.discount_per) && productDetail.discount_amount && !isNaN(productDetail.discount_amount)){
-    return true;
-  }else{
-    return false;
-  }
+function checkProductDetail(productDetails){
+  let result = false;
+  async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
+    if(productDetail.size && productDetail.size.trim() != '' && mongoose.Types.ObjectId.isValid(productDetail.size) && productDetail.stock && !isNaN(productDetail.stock) && productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0 && productDetail.discount_per && !isNaN(productDetail.discount_per) && productDetail.discount_amount && !isNaN(productDetail.discount_amount)){
+      result = true;
+    }else{
+      result = false;
+    }
+  }, () => {
+    return result;
+  });
 }
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
@@ -43,12 +49,13 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
         page,
         limit: parseInt(limit),
         select: '-createdBy -updatedBy -createdAt -__v',
-        populate: {path: 'productDetails.size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'},
         sort: {createdAt: -1},
         lean: true
       }).then((products) => {
         async.forEachSeries(products.docs, (product, next_product) => {
           (async () => {
+            let productVariants = await primary.model(constants.MODELS.variants, variantModel).find({product: product._id}).select('-product -status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+            product.productDetails = productVariants;
             let noofreview = parseInt(await primary.model(constants.MODELS.reviews, reviewModel).countDocuments({product: product._id}));
             if(noofreview > 0){
               let totalReviewsCountObj = await primary.model(constants.MODELS.reviews, reviewModel).aggregate([{$match: {product: product._id}} , {$group: {_id: null , sum: {$sum: '$rating'}}}]);
@@ -83,12 +90,10 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
-        let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -__v').populate({
-          path: 'productDetails.size',
-          model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
-          select: '_id size_name'
-        }).lean();
+        let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -__v').lean();
         if(productData && productData != null){
+          let productVariants = await primary.model(constants.MODELS.variants, variantModel).find({product: productData._id}).select('-product -status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+          productData.productDetails = productVariants;
           let noofreview = parseInt(await primary.model(constants.MODELS.reviews, reviewModel).countDocuments({product: productData._id}));
           if(noofreview > 0){
             let totalReviewsCountObj = await primary.model(constants.MODELS.reviews, reviewModel).aggregate([{$match: {product: productData._id}} , {$group: {_id: null , sum: {$sum: '$rating'}}}]);
@@ -157,80 +162,28 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
   const {productId , title , bannerImage , description , SKUID , productDetails , otherImages , cod , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token).lean();
     if(adminData && adminData != null){
       if(title && title.trim() != ''){
         if(bannerImage && bannerImage.trim() != ''){
           if(description && description.trim() != ''){
             if(SKUID && SKUID.trim() != ''){
-              if(productDetails && Array.isArray(productDetails) && productDetails.length > 0){
+              if(productDetails && Array.isArray(productDetails) && productDetails.length > 0 && checkProductDetail(productDetails)){
                 if(otherImages && Array.isArray(otherImages) && otherImages.length > 0){
                   if(status === true || status === false){
-                    if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
-                      let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
-                      if(productData && productData != null){
-                        let obj = {
-                          title: title.trim(),
-                          bannerImage: bannerImage.trim(),
-                          description: description.trim(),
-                          SKUID: SKUID.trim(),
-                          productDetails : [],
-                          otherImages: otherImages,
-                          cod: (cod === true) ? cod : false,
-                          status: status,
-                          updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                          updatedAt: new Date()
-                        };
-                        async.forEachSeries(productDetails, (productDetail, next_productDetail) => {
-                            let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                            let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                            let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
-                            let discounted_amount = 0.0;
-                            let discount = 0;
-                            if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
-                              discount = parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100);
-                              discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
-                            }else if(productDetail.discount_amount && !isNaN(productDetail.discount_amount) && parseFloat(productDetail.discount_amount) > 0){
-                              discount = productDetail.discount_amount;
-                              discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
-                            }else{
-                              discounted_amount = parseFloat(gross_amount);
-                            }
-                            obj.productDetails.push({
-                              size : productDetail.size,
-                              stock : parseInt(productDetail.stock),
-                              price : parseFloat(productDetail.price),
-                              sgst : parseFloat(sgst),
-                              cgst : parseFloat(cgst),
-                              gross_amount :  parseFloat(gross_amount),
-                              discount_per : parseFloat(productDetail.discount_per),
-                              discount_amount : parseFloat(productDetail.discount_amount),
-                              discount : parseFloat(discount),
-                              discounted_amount : parseFloat(discounted_amount)
-                            });
-                            next_productDetail();
-                        }, () => {
-                          (async () => {
-                            let updatedProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id , obj , {returnOriginal: false}).lean();
-                            return responseManager.onSuccess('Product data update successfully...!' , 1 , res);
-                          })().catch((error) => { });
-                        });
-                      }else{
-                        return responseManager.badrequest({message: 'Invalid id to get product data, Please try again...!'}, res);
-                      }
-                    }else{
-                      let obj = {
-                        title: title.trim(),
-                        bannerImage: bannerImage.trim(),
-                        description: description.trim(),
-                        SKUID: SKUID.trim(),
-                        productDetails: [],
-                        otherImages: otherImages,
-                        cod: (cod === true) ? cod : false,
-                        status: status,
-                        createdBy: new mongoose.Types.ObjectId(adminData._id)
-                      };
-                      async.forEachSeries(productDetails, (productDetail, next_productDetail) => {
+                    let productObj = {
+                      title: title.trim(),
+                      bannerImage: bannerImage.trim(),
+                      description: description.trim(),
+                      SKUID: SKUID.trim(),
+                      otherImages: otherImages,
+                      cod: (cod === true) ? cod : false,
+                      status: status,
+                      createdBy: new mongoose.Types.ObjectId(adminData._id),
+                    };
+                    let newProduct = await primary.model(constants.MODELS.products, productModel).create(productObj);
+                    async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
+                      (async () => {
                         let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
                         let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
                         let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
@@ -245,8 +198,9 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                         }else{
                           discounted_amount = parseFloat(gross_amount);
                         }
-                        obj.productDetails.push({
-                          size : productDetail.size,
+                        let variantObj = {
+                          product: new mongoose.Types.ObjectId(newProduct._id),
+                          size: new mongoose.Types.ObjectId(productDetail.size),
                           stock : parseInt(productDetail.stock),
                           price : parseFloat(productDetail.price),
                           sgst : parseFloat(sgst),
@@ -255,18 +209,18 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                           discount_per : parseFloat(productDetail.discount_per),
                           discount_amount : parseFloat(productDetail.discount_amount),
                           discount : parseFloat(discount),
-                          discounted_amount : parseFloat(discounted_amount)
-                        });
+                          discounted_amount : parseFloat(discounted_amount),
+                          status: true,
+                          createdBy: new mongoose.Types.ObjectId(adminData._id),
+                        };
+                        await primary.model(constants.MODELS.variants, variantModel).create(variantObj);
                         next_productDetail();
-                      }, () => {
-                        (async () => {
-                          await primary.model(constants.MODELS.products, productModel).create(obj);
-                          return responseManager.onSuccess('New product hello added successfully...!' , 1 , res);
-                        })().catch((error) => {
-                          return responseManager.onError(error , res);
-                        });
+                      })().catch((error) => {
+                        return responseManager.onError(error , res);
                       });
-                    }
+                    }, () => {
+                      return responseManager.onSuccess('New product added successfully...!', 1 , res);
+                    });
                   }else{
                     return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
                   }
@@ -274,7 +228,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                   return responseManager.badrequest({message: 'Please select at least one other image...!'}, res);
                 }
               }else{
-                return responseManager.badrequest({message: 'Please provide product details, Please try again...!'}, res);
+                return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
               }
             }else{
               return responseManager.badrequest({message: 'Please provide SKUID for product, Please try again...!'}, res);
@@ -323,10 +277,51 @@ router.post('/upload' , helper.authenticateToken , upload.single('productImages'
         return responseManager.badrequest({ message: 'Invalid file, please try again' }, res);
       }
     }else{
-      return responseManager.badrequest({ message: 'Invalid toke to get admin, Please try again...!' } , res);
+      return responseManager.badrequest({ message: 'Invalid token to get admin, Please try again...!' } , res);
     }
   }else{
-    return responseManager.badrequest({ message: 'Invalid toke to get admin, Please try again...!' } , res);
+    return responseManager.badrequest({ message: 'Invalid token to get admin, Please try again...!' } , res);
+  }
+});
+
+router.post('/upload/multiple' , helper.authenticateToken , upload.array('productImages' , 5) , async (req , res) => {
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+    if(adminData && adminData != null){
+      let files = req.files;
+      if(files && files.length >= 0 && files.length <= 5){
+        let paths = [];
+        async.forEachSeries(files, (file , next_file) => {
+          if(allowedContentTypes.imagearray.includes(file.mimetype)){
+            let sizeOfImageInMB = helper.bytesToMB(file.size);
+            if(sizeOfImageInMB <= 5){
+              aws.saveToS3WithName(file.buffer , 'Products' , file.mimetype , 'Images').then((result) => {
+                let data = {
+                  path: result.data.Key,
+                };
+                paths.push(data);
+                next_file();
+              }).catch((error) => {
+                return responseManager.onError(error , res);
+              });
+            }else{
+              return responseManager.badrequest({ message: 'Image file must be <= 5 MB, please try again' }, res);
+            }
+          }else{
+            return responseManager.badrequest({ message: 'Invalid file type only image files allowed for profile pic, please try again' }, res);
+          }
+        }, () => {
+          return responseManager.onSuccess('Images upload successfully...!' , paths , res);
+        });
+      }else{
+        return responseManager.badrequest({message: 'Please select only 5 images, Please try again...!'}, res);
+      }
+    }else{
+      return responseManager.badrequest({ message: 'Invalid token to get admin, Please try again...!' } , res);
+    }
+  }else{
+    return responseManager.badrequest({ message: 'Invalid token to get admin, Please try again...!' } , res);
   }
 });
 
