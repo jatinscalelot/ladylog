@@ -1,47 +1,5 @@
 let mongoose = require("mongoose");
 let mongoosePaginate = require("mongoose-paginate-v2");
-let productDetails = new mongoose.Schema({
-	size: {
-		type: mongoose.Types.ObjectId,
-		require: true
-	},
-	stock: {
-		type: Number,
-		require: true
-	},
-	price: {
-		type: Number,
-		require: true
-	},
-	sgst: {
-		type: Number,
-		require: true
-	},
-	cgst: {
-		type: Number,
-		require: true
-	},
-	gross_amount: {
-		type: Number,
-		require: true
-	},
-	discount_per: {
-		type: Number,
-		require: true
-	},
-	discount_amount: {
-		type: Number,
-		require: true
-	},
-	discount: {
-		type: Number,
-		require: true
-	},
-	discounted_amount: {
-		type: Number,
-		require: true
-	}
-});
 let otherImages = new mongoose.Schema({
 	path: {
 		type: String,
@@ -65,7 +23,6 @@ let schema = new mongoose.Schema({
 		type: String,
 		require: true
 	},
-	productDetails: [productDetails],
 	otherImages: [otherImages],
 	cod: {
 		type: Boolean,
