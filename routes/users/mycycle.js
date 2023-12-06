@@ -25,7 +25,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     createdBy: new mongoose.Types.ObjectId(userData._id)
                 }
                 await primary.model(constants.MODELS.mycycles , mycycleModel).create(obj);
-                const next_period_start_date = helper.addDaysToTimestamp(userData.period_end_date , userData.cycle-1);
+                const next_period_start_date = helper.addDaysToTimestamp(userData.period_start_date , userData.cycle-1);
                 const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , userData.period_days-1);
                 let updateUser = await primary.model(constants.MODELS.users , userModel).findById(userData._id , {period_start_date: next_period_start_date , period_end_date: next_period_end_date} , {returnOriginal: false}).lean();
                 let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(1).lean();
