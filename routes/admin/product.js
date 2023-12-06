@@ -26,15 +26,11 @@ async function checkProductDetails(productDetails){
   let result = false;
   let promise = new Promise(function (resolve , reject) {
     async.forEachSeries(productDetails, (productDetail, next_productDetail) => {
-      if(mongoose.Types.ObjectId.isValid(productDetail._id) || productDetail._id === ''){
-        if(productDetail.size && productDetail.size.trim() != '' && mongoose.Types.ObjectId.isValid(productDetail.size)){
-          if(productDetail.stock && !isNaN(productDetail.stock)){
-            if(productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0){
-              if((!isNaN(productDetail.discount_per) && productDetail.discount_per >= 0) || (!isNaN(productDetail.discount_amount) && productDetail.discount_amount >= 0)){
-                result = true;
-              }else{
-                result = false;
-              }
+      if(productDetail.size && productDetail.size.trim() != '' && mongoose.Types.ObjectId.isValid(productDetail.size)){
+        if(productDetail.stock && !isNaN(productDetail.stock)){
+          if(productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0){
+            if((!isNaN(productDetail.discount_per) && productDetail.discount_per >= 0) || (!isNaN(productDetail.discount_amount) && productDetail.discount_amount >= 0)){
+              result = true;
             }else{
               result = false;
             }
@@ -223,7 +219,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                             let updatedProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id , productObj , {returnOriginal: false}).lean();
                             async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
                               (async () => {
-                                if(productDetail._id && productDetail._id.trim() != mongoose.Types.ObjectId.isValid(productDetail._id)){
+                                if(productDetail._id && productDetail._id.trim() != '' && mongoose.Types.ObjectId.isValid(productDetail._id)){
                                   let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(productDetail._id).lean();
                                   if(veriantData && veriantData != null){
                                     let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
