@@ -16,7 +16,7 @@ const async = require('async');
 //   return list.some(elem => elem._id.toString() === obj._id.toString());
 // };
 
-router.get('/' , helper.authenticateToken , async (req , res) => {
+router.get('/categories' , helper.authenticateToken , async (req , res) => {
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
@@ -76,7 +76,6 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           select: '-createdBy -updatedBy -status -__v -updatedAt',
           lean: true
         }).then((stories) => {
-          console.log('stories :', stories);
           async.forEachSeries(stories.docs , (story , next_story) => {
             const exists = savedStory.story.some(val => val.toString() === story._id.toString());
             if(exists){
@@ -132,6 +131,27 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
     }
   }else{ 
     return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+  }
+});
+
+router.get('/savedStory' , helper.authenticateToken , async (req , res) => {
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+    if(userData && userData != null && userData.status === true){
+      let savedStoryObj = await primary.model(constants.MODELS.savedstories, userStoryModel).findOne({createdBy: userData._id}).select('story').lean();
+      let savedstories = await primary.model(constants.MODELS.stories, storyModel).find({"_id": {"$in": savedStoryObj.story}}).select('-status -createdBy -updatedBy -createdAt -updatedAt').lean();
+      async.forEachSeries(savedstories, (savedStory, next_savedStory) => {
+        savedStory.is_save = true;
+        next_savedStory();
+      }, () => {
+        return responseManager.onSuccess('Saved story details...!', savedstories , res);
+      });
+    }else{
+      return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+    }
+  }else{
+    return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
   }
 });
 
