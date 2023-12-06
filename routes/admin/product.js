@@ -9,7 +9,7 @@ const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
 const userModel = require('../../models/users/users.model');
 const productModel = require('../../models/admin/products.model');
-const variantModel = require('../../models/admin/variants.model');
+const veriantModel = require('../../models/admin/veriants.model');
 const reviewModel = require('../../models/users/review.model');
 const sizeMasterModel = require('../../models/admin/size.master');
 const upload = require('../../utilities/multer.functions');
@@ -22,17 +22,42 @@ function getAverage(sum , len){
   return sum/len;
 };
 
-function checkProductDetail(productDetails){
+async function checkProductDetails(productDetails){
   let result = false;
-  async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
-    if(productDetail.size && productDetail.size.trim() != '' && mongoose.Types.ObjectId.isValid(productDetail.size) && productDetail.stock && !isNaN(productDetail.stock) && productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0 && productDetail.discount_per && !isNaN(productDetail.discount_per) && productDetail.discount_amount && !isNaN(productDetail.discount_amount)){
-      result = true;
-    }else{
-      result = false;
-    }
-  }, () => {
-    return result;
+  let promise = new Promise(function (resolve , reject) {
+    async.forEachSeries(productDetails, (productDetail, next_productDetail) => {
+      if(mongoose.Types.ObjectId.isValid(productDetail._id) || productDetail._id === ''){
+        if(productDetail.size && productDetail.size.trim() != '' && mongoose.Types.ObjectId.isValid(productDetail.size)){
+          if(productDetail.stock && !isNaN(productDetail.stock)){
+            if(productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0){
+              if((!isNaN(productDetail.discount_per) && productDetail.discount_per >= 0) || (!isNaN(productDetail.discount_amount) && productDetail.discount_amount >= 0)){
+                result = true;
+              }else{
+                result = false;
+              }
+            }else{
+              result = false;
+            }
+          }else{
+            result = false;
+          }
+        }else{
+          result = false;
+        }
+      }else{
+        result = false;
+      }
+      next_productDetail();
+    }, () => {
+      if(result === true){
+        let data = {result: result};
+        resolve({message: 'Valid product details...!' , data});
+      }else{
+        reject(new Error({message: 'Invalid product details...!'}));
+      }
+    })
   });
+  return promise;
 }
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
@@ -54,7 +79,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
       }).then((products) => {
         async.forEachSeries(products.docs, (product, next_product) => {
           (async () => {
-            let productVariants = await primary.model(constants.MODELS.variants, variantModel).find({product: product._id}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
+            let productVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product: product._id}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
               path: 'size',
               model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
               select: '_id size_name'
@@ -96,7 +121,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
         let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -__v').lean();
         if(productData && productData != null){
-          let productVariants = await primary.model(constants.MODELS.variants, variantModel).find({product: productData._id}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
+          let productVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product: productData._id}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
             path: 'size',
             model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
             select: '_id size_name'
@@ -176,67 +201,175 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
         if(bannerImage && bannerImage.trim() != ''){
           if(description && description.trim() != ''){
             if(SKUID && SKUID.trim() != ''){
-              if(productDetails && Array.isArray(productDetails) && productDetails.length > 0 && checkProductDetail(productDetails)){
-                if(otherImages && Array.isArray(otherImages) && otherImages.length > 0){
-                  if(status === true || status === false){
-                    let productObj = {
-                      title: title.trim(),
-                      bannerImage: bannerImage.trim(),
-                      description: description.trim(),
-                      SKUID: SKUID.trim(),
-                      otherImages: otherImages,
-                      cod: (cod === true) ? cod : false,
-                      status: status,
-                      createdBy: new mongoose.Types.ObjectId(adminData._id),
-                    };
-                    let newProduct = await primary.model(constants.MODELS.products, productModel).create(productObj);
-                    async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
-                      (async () => {
-                        let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                        let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                        let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
-                        let discounted_amount = 0.0;
-                        let discount = 0;
-                        if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
-                          discount = parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100);
-                          discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
-                        }else if(productDetail.discount_amount && !isNaN(productDetail.discount_amount) && parseFloat(productDetail.discount_amount) > 0){
-                          discount = productDetail.discount_amount;
-                          discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
+              if(otherImages && Array.isArray(otherImages) && otherImages.length > 0){
+                if(status === true || status === false){
+                  if(productDetails && Array.isArray(productDetails) && productDetails.length >= 0){
+                    checkProductDetails(productDetails).then(async (result) => {
+                      if(result.data.result === true){
+                        if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
+                          let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
+                          if(productData && productData != null){
+                            let productObj = {
+                              title: title.trim(),
+                              bannerImage: bannerImage.trim(),
+                              description: description.trim(),
+                              SKUID: SKUID.trim(),
+                              otherImages: otherImages,
+                              cod: (cod === true) ? cod : false,
+                              status: status,
+                              updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                              updatedAt: new Date()
+                            };
+                            let updatedProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productData._id , productObj , {returnOriginal: false}).lean();
+                            async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
+                              (async () => {
+                                if(productDetail._id && productDetail._id.trim() != mongoose.Types.ObjectId.isValid(productDetail._id)){
+                                  let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(productDetail._id).lean();
+                                  if(veriantData && veriantData != null){
+                                    let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
+                                    let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
+                                    let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
+                                    let discounted_amount = 0.0;
+                                    let discount = 0;
+                                    if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
+                                      discount = parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100);
+                                      discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
+                                    }else if(productDetail.discount_amount && !isNaN(productDetail.discount_amount) && parseFloat(productDetail.discount_amount) > 0){
+                                      discount = productDetail.discount_amount;
+                                      discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
+                                    }else{
+                                      discounted_amount = parseFloat(gross_amount);
+                                    }
+                                    let veriantObj = {
+                                      product: new mongoose.Types.ObjectId(updatedProduct._id),
+                                      size: new mongoose.Types.ObjectId(productDetail.size),
+                                      stock : parseInt(productDetail.stock),
+                                      price : parseFloat(productDetail.price),
+                                      sgst : parseFloat(sgst),
+                                      cgst : parseFloat(cgst),
+                                      gross_amount :  parseFloat(gross_amount),
+                                      discount_per : parseFloat(productDetail.discount_per),
+                                      discount_amount : parseFloat(productDetail.discount_amount),
+                                      discount : parseFloat(discount),
+                                      discounted_amount : parseFloat(discounted_amount),
+                                      status: true,
+                                      updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                      updatedAt: new Date()
+                                    };
+                                    let updatedVeriantData = await primary.model(constants.MODELS.veriants, veriantModel).findByIdAndUpdate(veriantData._id , veriantObj , {returnOriginal: false}).lean();
+                                    next_productDetail();
+                                  }else{
+                                    return responseManager.badrequest({message: 'Invalid id to get variant of product, Please try again...!'}, res);
+                                  }
+                                }else{
+                                  let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
+                                  let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
+                                  let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
+                                  let discounted_amount = 0.0;
+                                  let discount = 0;
+                                  if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
+                                    discount = parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100);
+                                    discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
+                                  }else if(productDetail.discount_amount && !isNaN(productDetail.discount_amount) && parseFloat(productDetail.discount_amount) > 0){
+                                    discount = productDetail.discount_amount;
+                                    discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
+                                  }else{
+                                    discounted_amount = parseFloat(gross_amount);
+                                  }
+                                  let veriantObj = {
+                                    product: new mongoose.Types.ObjectId(productData._id),
+                                    size: new mongoose.Types.ObjectId(productDetail.size),
+                                    stock : parseInt(productDetail.stock),
+                                    price : parseFloat(productDetail.price),
+                                    sgst : parseFloat(sgst),
+                                    cgst : parseFloat(cgst),
+                                    gross_amount :  parseFloat(gross_amount),
+                                    discount_per : parseFloat(productDetail.discount_per),
+                                    discount_amount : parseFloat(productDetail.discount_amount),
+                                    discount : parseFloat(discount),
+                                    discounted_amount : parseFloat(discounted_amount),
+                                    status: true,
+                                    createdBy: new mongoose.Types.ObjectId(adminData._id)
+                                  };
+                                  await primary.model(constants.MODELS.veriants, veriantModel).create(veriantObj);
+                                  next_productDetail();
+                                }
+                              })().catch((error) => {
+                                return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
+                              });
+                            }, () => {
+                              return responseManager.onSuccess('Product data updated successfully...!', 1 , res);
+                            });
+                          }else{
+                            return responseManager.badrequest({message: 'Invalid id to get product, Please try again...!'}, res);
+                          }
                         }else{
-                          discounted_amount = parseFloat(gross_amount);
+                          let productObj = {
+                            title: title.trim(),
+                            bannerImage: bannerImage.trim(),
+                            description: description.trim(),
+                            SKUID: SKUID.trim(),
+                            otherImages: otherImages,
+                            cod: (cod === true) ? cod : false,
+                            status: status,
+                            createdBy: new mongoose.Types.ObjectId(adminData._id),
+                          };
+                          let newProduct = await primary.model(constants.MODELS.products, productModel).create(productObj);
+                          async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
+                            (async () => {
+                              let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
+                              let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
+                              let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
+                              let discounted_amount = 0.0;
+                              let discount = 0;
+                              if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
+                                discount = parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100);
+                                discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
+                              }else if(productDetail.discount_amount && !isNaN(productDetail.discount_amount) && parseFloat(productDetail.discount_amount) > 0){
+                                discount = productDetail.discount_amount;
+                                discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
+                              }else{
+                                discounted_amount = parseFloat(gross_amount);
+                              }
+                              let veriantObj = {
+                                product: new mongoose.Types.ObjectId(newProduct._id),
+                                size: new mongoose.Types.ObjectId(productDetail.size),
+                                stock : parseInt(productDetail.stock),
+                                price : parseFloat(productDetail.price),
+                                sgst : parseFloat(sgst),
+                                cgst : parseFloat(cgst),
+                                gross_amount :  parseFloat(gross_amount),
+                                discount_per : parseFloat(productDetail.discount_per),
+                                discount_amount : parseFloat(productDetail.discount_amount),
+                                discount : parseFloat(discount),
+                                discounted_amount : parseFloat(discounted_amount),
+                                status: true,
+                                createdBy: new mongoose.Types.ObjectId(adminData._id)
+                              };
+                              await primary.model(constants.MODELS.veriants, veriantModel).create(veriantObj);
+                              next_productDetail();
+                            })().catch((error) => {
+                              return responseManager.onError(error , res);
+                            });
+                          }, () => {
+                            return responseManager.onSuccess('New product added successfully...!', 1 , res);
+                          });
                         }
-                        let variantObj = {
-                          product: new mongoose.Types.ObjectId(newProduct._id),
-                          size: new mongoose.Types.ObjectId(productDetail.size),
-                          stock : parseInt(productDetail.stock),
-                          price : parseFloat(productDetail.price),
-                          sgst : parseFloat(sgst),
-                          cgst : parseFloat(cgst),
-                          gross_amount :  parseFloat(gross_amount),
-                          discount_per : parseFloat(productDetail.discount_per),
-                          discount_amount : parseFloat(productDetail.discount_amount),
-                          discount : parseFloat(discount),
-                          discounted_amount : parseFloat(discounted_amount),
-                          status: true,
-                          createdBy: new mongoose.Types.ObjectId(adminData._id),
-                        };
-                        await primary.model(constants.MODELS.variants, variantModel).create(variantObj);
-                        next_productDetail();
-                      })().catch((error) => {
-                        return responseManager.onError(error , res);
-                      });
-                    }, () => {
-                      return responseManager.onSuccess('New product added successfully...!', 1 , res);
+                      }else{
+                        return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
+                      }
+                    }).catch((error) => {
+                      console.log('error :', error);
+                      return responseManager.onError(error , res);
                     });
                   }else{
-                    return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
+                    return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
                   }
                 }else{
-                  return responseManager.badrequest({message: 'Please select at least one other image...!'}, res);
+                  return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
                 }
               }else{
-                return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
+                return responseManager.badrequest({message: 'Please select at least one other image...!'}, res);
               }
             }else{
               return responseManager.badrequest({message: 'Please provide SKUID for product, Please try again...!'}, res);
@@ -268,6 +401,7 @@ router.post('/upload' , helper.authenticateToken , upload.single('productImages'
           let sizeOfImageInMB = helper.bytesToMB(req.file.size);
           if(sizeOfImageInMB <= 5){
             aws.saveToS3WithName(req.file.buffer , 'Products' , req.file.mimetype , 'Images').then((result) => {
+              console.log('result :', result);
               let data = {
                 path: result.data.Key,
               };

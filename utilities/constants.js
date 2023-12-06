@@ -8,7 +8,7 @@ let constants = {
         usersymptoms: 'usersymptoms',
         mycycles: 'mycycles',
         products: 'products',
-        variants: 'variants',
+        veriants: 'veriants',
         carts: 'carts',
         reviews: 'reviews',
         storymasters: 'storymasters',
