@@ -140,7 +140,11 @@ router.get('/savedStory' , helper.authenticateToken , async (req , res) => {
     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
     if(userData && userData != null && userData.status === true){
       let savedStoryObj = await primary.model(constants.MODELS.savedstories, userStoryModel).findOne({createdBy: userData._id}).select('story').lean();
-      let savedstories = await primary.model(constants.MODELS.stories, storyModel).find({"_id": {"$in": savedStoryObj.story}}).select('-status -createdBy -updatedBy -createdAt -updatedAt').lean();
+      let savedstories = await primary.model(constants.MODELS.stories, storyModel).find({"_id": {"$in": savedStoryObj.story}}).populate({
+        path: 'category',
+        model: primary.model(constants.MODELS.storymasters, storyMasterModel),
+        select: '_id category_name'
+      }).select('-status -createdBy -updatedBy -createdAt -updatedAt').lean();
       async.forEachSeries(savedstories, (savedStory, next_savedStory) => {
         savedStory.is_save = true;
         next_savedStory();
