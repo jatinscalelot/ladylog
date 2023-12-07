@@ -355,7 +355,6 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                         return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
                       }
                     }).catch((error) => {
-                      console.log('error :', error);
                       return responseManager.onError(error , res);
                     });
                   }else{

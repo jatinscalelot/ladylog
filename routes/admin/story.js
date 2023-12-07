@@ -9,9 +9,11 @@ const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
 const storyModel = require('../../models/admin/story.model');
 const storyMasterModel = require('../../models/admin/story.master'); 
+const symptomModel = require('../../models/admin/symptoms.model');
 const upload = require('../../utilities/multer.functions');
 const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
+const async = require('async');
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
   const {page , limit , search} = req.body;
@@ -73,7 +75,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
 });
 
 router.post('/save' , helper.authenticateToken , async (req , res) => {
-  const {storyId , storyCategoryId , title , header_image , main_description , description , author_name, status} = req.body;
+  const {storyId , storyCategoryId , title , header_image , main_description , description , author_name, symptomIds , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
@@ -87,38 +89,70 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                 if(description && description.trim() != ''){
                   if(author_name && author_name.trim() != ''){
                     if(status === true || status === false){
-                      if(storyId && storyId.trim() != '' && mongoose.Types.ObjectId.isValid(storyId)){
-                        let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyId).lean();
-                        if(storyData && storyData != null){
-                          let obj = {
-                            category: new mongoose.Types.ObjectId(storyCategoryId),
-                            author_name: author_name,
-                            title: title,
-                            header_image: header_image,
-                            main_description: main_description.trim(),
-                            description: description.trim(),
-                            status: status,
-                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                            updatedAt: new Date()
-                          };
-                          let updatedStoryData = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(storyData._id, obj, {returnOriginal: false}).lean();
-                          return responseManager.onSuccess('Story data updated successfully...!', 1, res);
-                        }else{
-                          return responseManager.badrequest({message: 'Invalid id to story data, Please try again...!'}, res);
-                        }
+                      if(symptomIds && Array.isArray(symptomIds) && symptomIds.length > 0){
+                        let result = false;
+                        async.forEachSeries(symptomIds, (symptomId , next_symptomId) => {
+                          (async () => {
+                            if(symptomId && symptomId.trim() != '' && mongoose.Types.ObjectId.isValid(symptomId)){
+                              let symptomData = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomId).lean();
+                              if(symptomData && symptomData != null && symptomData.status === true){
+                                result = true
+                              }else{
+                                result = false
+                              }
+                            }else{
+                              return  responseManager.badrequest({message: 'Invalid ids to get symptom, Please try again...!'} , res);
+                            }
+                            next_symptomId();
+                          })().catch((error) => {
+                            console.log('error :', error);
+                            return responseManager.onError(error , res);
+                          });
+                        } , () => {
+                          (async () => {
+                            if(result === true){
+                              if(storyId && storyId.trim() != '' && mongoose.Types.ObjectId.isValid(storyId)){
+                                let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyId).lean();
+                                if(storyData && storyData != null){
+                                  let obj = {
+                                    category: new mongoose.Types.ObjectId(storyCategoryId),
+                                    author_name: author_name,
+                                    title: title,
+                                    header_image: header_image,
+                                    main_description: main_description.trim(),
+                                    description: description.trim(),
+                                    status: status,
+                                    updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                    updatedAt: new Date()
+                                  };
+                                  let updatedStoryData = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(storyData._id, obj, {returnOriginal: false}).lean();
+                                  return responseManager.onSuccess('Story data updated successfully...!', 1, res);
+                                }else{
+                                  return responseManager.badrequest({message: 'Invalid id to story data, Please try again...!'}, res);
+                                }
+                              }else{
+                                let obj = {
+                                  category: new mongoose.Types.ObjectId(storyCategoryId),
+                                  author_name: author_name,
+                                  title: title,
+                                  header_image: header_image,
+                                  main_description: main_description.trim(),
+                                  description: description.trim(),
+                                  status: status,
+                                  createdBy: new mongoose.Types.ObjectId(adminData._id)
+                                };
+                                let newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
+                                return responseManager.onSuccess('Story added successfully...!' , 1 , res);
+                              }
+                            }else{
+                              return  responseManager.badrequest({message: 'Invalid ids to get symptom, Please try again...!'} , res);
+                            }
+                          })().catch((error) => {
+                            return responseManager.onError(error , res);
+                          });
+                        });
                       }else{
-                        let obj = {
-                          category: new mongoose.Types.ObjectId(storyCategoryId),
-                          author_name: author_name,
-                          title: title,
-                          header_image: header_image,
-                          main_description: main_description.trim(),
-                          description: description.trim(),
-                          status: status,
-                          createdBy: new mongoose.Types.ObjectId(adminData._id)
-                        };
-                        let newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
-                        return responseManager.onSuccess('Story added successfully...!' , 1 , res);
+                        return responseManager.badrequest({message: 'Add symptoms for story...!'}, res);
                       }
                     }else{
                       return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);

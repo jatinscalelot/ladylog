@@ -13,27 +13,36 @@ const upload = require('../../utilities/multer.functions');
 const aws = require('../../utilities/aws');
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
-  const {page , limit , search} = req.body;
+  const {pagination , page , limit , search} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let admin = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id);
     if(admin && admin != null){
-      await primary.model(constants.MODELS.symptoms, symptomModel).paginate({
-        $or: [
-          {symptom_name: {$regex: search, $options: 'i'}}
-        ]
-      },{
-        page,
-        limit: parseInt(limit),
-        select: '-createdAt -updatedAt -__v -createdBy -updatedBy',
-        sort: {createdAt: -1},
-        populate: {path: 'category' , model: primary.model(constants.MODELS.symptomMasters, symptomMasterModel) , select: '_id category_name'},
-        lean: true
-      }).then((symptoms) => {
-        return responseManager.onSuccess('symptoms data...!' , symptoms , res);
-      }).catch((error) => {
-        return responseManager.onError(error, res);
-      });
+      if(pagination === true){
+        primary.model(constants.MODELS.symptoms, symptomModel).paginate({
+          $or: [
+            {symptom_name: {$regex: search, $options: 'i'}}
+          ]
+        },{
+          page,
+          limit: parseInt(limit),
+          select: '-createdAt -updatedAt -__v -createdBy -updatedBy',
+          sort: {createdAt: -1},
+          populate: {path: 'category' , model: primary.model(constants.MODELS.symptomMasters, symptomMasterModel) , select: '_id category_name'},
+          lean: true
+        }).then((symptoms) => {
+          return responseManager.onSuccess('symptoms data...!' , symptoms , res);
+        }).catch((error) => {
+          return responseManager.onError(error, res);
+        });
+      }else{
+        let symptoms = await primary.model(constants.MODELS.symptoms, symptomModel).find({status: true}).populate({
+          path: 'category',
+          model: primary.model(constants.MODELS.symptomMasters, symptomMasterModel),
+          select: '_id category_name'
+        }).select('-createdAt -updatedAt -__v -createdBy -updatedBy').lean();
+        return responseManager.onSuccess('All symptoms...!' , symptoms , res);
+      }
     }else{
       return responseManager.badrequest({ message: 'Invalid token to get admin, Please try again.' } , res);
     }
