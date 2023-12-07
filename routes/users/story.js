@@ -52,7 +52,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             limit: parseInt(limit),
             sort: {createdAt: -1},
             populate: {path: 'category' , model: primary.model(constants.MODELS.storymasters, storyMasterModel) , select: '_id category_name'},
-            select: '-createdBy -updatedBy -__v -updatedAt',
+            select: '-createdBy -updatedBy -__v -updatedAt -symptomIds',
             lean: true
           }).then((stories) => {
             if(savedStory && savedStory != null){
@@ -93,7 +93,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           limit: parseInt(limit),
           sort: {createdAt: -1},
           populate: {path: 'category' , model: primary.model(constants.MODELS.storymasters, storyMasterModel) , select: '_id category_name'},
-          select: '-createdBy -updatedBy -status -__v -updatedAt',
+          select: '-createdBy -updatedBy -__v -updatedAt -symptomIds',
           lean: true
         }).then((stories) => {
           if(savedStory && savedStory != null){
@@ -136,7 +136,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
     if(userData && userData != null && userData.status === true){
       let savedStory = await primary.model(constants.MODELS.savedstories, userStoryModel).findOne({createdBy: userData._id}).lean();
       if(storyID && storyID != '' && mongoose.Types.ObjectId.isValid(storyID)){
-        let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyID).select('-createdBy -updatedBy -__v -updatedAt').populate({
+        let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyID).select('-createdBy -updatedBy -__v -updatedAt -symptomIds').populate({
           path: 'category',
           model: primary.model(constants.MODELS.storymasters, storyMasterModel),
           select: '_id category_name'
@@ -186,7 +186,7 @@ router.post('/savedStory' , helper.authenticateToken , async (req , res) => {
           limit: parseInt(limit),
           sort: {createdAt: -1},
           populate: {path: 'category' , model: primary.model(constants.MODELS.storymasters, storyMasterModel) , select: '_id category_name'},
-          select: '-createdBy -updatedBy -status -__v -updatedAt',
+          select: '-createdBy -updatedBy -__v -updatedAt -symptomIds',
           lean: true
         }).then((savedstories) => {
           async.forEachSeries(savedstories.docs, (savedStory, next_savedStory) => {

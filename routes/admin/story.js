@@ -23,7 +23,6 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
     if(adminData && adminData != null){
       await primary.model(constants.MODELS.stories, storyModel).paginate({
         $or: [
-          {author_name: {$regex: search, $options: 'i'}},
           {title: {$regex: search, $options: 'i'}},
         ]
       }, {
@@ -75,7 +74,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
 });
 
 router.post('/save' , helper.authenticateToken , async (req , res) => {
-  const {storyId , storyCategoryId , title , header_image , main_description , description , author_name, symptomIds , status} = req.body;
+  const {storyId , storyCategoryId , title , header_image , story_brief , story_content , pdf_url ,author_name, symptomIds , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
@@ -85,87 +84,131 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
         if(storyCategory && storyCategory != null && storyCategory.status === true){
           if(title && title.trim() != ''){
             if(header_image && header_image.trim() != ''){
-              if(main_description && main_description.trim() != ''){
-                if(description && description.trim() != ''){
-                  if(author_name && author_name.trim() != ''){
-                    if(status === true || status === false){
-                      if(symptomIds && Array.isArray(symptomIds) && symptomIds.length > 0){
-                        let result = false;
-                        let newSymptomIdsArray = []
-                        async.forEachSeries(symptomIds, (symptomId , next_symptomId) => {
-                          (async () => {
-                            if(symptomId && symptomId.trim() != '' && mongoose.Types.ObjectId.isValid(symptomId)){
-                              let symptomData = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomId).lean();
-                              if(symptomData && symptomData != null && symptomData.status === true){
-                                newSymptomIdsArray.push(symptomData._id);
-                                result = true
-                              }else{
-                                result = false
-                              }
+              if(story_brief && story_brief.trim() != ''){
+                if(author_name && author_name.trim() != ''){
+                  if(status === true || status === false){
+                    if(symptomIds && Array.isArray(symptomIds) && symptomIds.length > 0){
+                      let result = false;
+                      let newSymptomIdsArray = []
+                      async.forEachSeries(symptomIds, (symptomId , next_symptomId) => {
+                        (async () => {
+                          if(symptomId && symptomId.trim() != '' && mongoose.Types.ObjectId.isValid(symptomId)){
+                            let symptomData = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomId).lean();
+                            if(symptomData && symptomData != null && symptomData.status === true){
+                              newSymptomIdsArray.push(symptomData._id);
+                              result = true
                             }else{
-                              return  responseManager.badrequest({message: 'Invalid ids to get symptom, Please try again...!'} , res);
+                              result = false
                             }
-                            next_symptomId();
-                          })().catch((error) => {
-                            console.log('error :', error);
-                            return responseManager.onError(error , res);
-                          });
-                        } , () => {
-                          (async () => {
-                            if(result === true){
-                              if(storyId && storyId.trim() != '' && mongoose.Types.ObjectId.isValid(storyId)){
-                                let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyId).lean();
-                                if(storyData && storyData != null){
+                          }else{
+                            return  responseManager.badrequest({message: 'Invalid ids to get symptom, Please try again...!'} , res);
+                          }
+                          next_symptomId();
+                        })().catch((error) => {
+                          console.log('error :', error);
+                          return responseManager.onError(error , res);
+                        });
+                      } , () => {
+                        (async () => {
+                          if(result === true){
+                            if(!(story_content && pdf_url)){
+                              if(story_content && story_content.trim() != '' && story_content.length <= 10000){
+                                if(storyId && storyId.trim() != '' && mongoose.Types.ObjectId.isValid(storyId)){
+                                  let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyId).lean();
+                                  if(storyData && storyData != null){
+                                    let obj = {
+                                      category: new mongoose.Types.ObjectId(storyCategoryId),
+                                      author_name: author_name,
+                                      title: title,
+                                      header_image: header_image,
+                                      story_brief: story_brief.trim(),
+                                      story_content: story_content.trim(),
+                                      pdf_url: '',
+                                      symptomIds: newSymptomIdsArray,
+                                      status: status,
+                                      updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                      updatedAt: new Date()
+                                    };
+                                    let updatedStoryData = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(storyData._id, obj, {returnOriginal: false}).lean();
+                                    return responseManager.onSuccess('Story data updated successfully...!', 1, res);
+                                  }else{
+                                    return responseManager.badrequest({message: 'Invalid id to story data, Please try again...!'}, res);
+                                  }
+                                }else{
                                   let obj = {
                                     category: new mongoose.Types.ObjectId(storyCategoryId),
                                     author_name: author_name,
                                     title: title,
                                     header_image: header_image,
-                                    main_description: main_description.trim(),
-                                    description: description.trim(),
+                                    story_brief: story_brief.trim(),
+                                    story_content: story_content.trim(),
+                                    pdf_url: '',
                                     symptomIds: newSymptomIdsArray,
                                     status: status,
-                                    updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                                    updatedAt: new Date()
+                                    createdBy: new mongoose.Types.ObjectId(adminData._id)
                                   };
-                                  let updatedStoryData = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(storyData._id, obj, {returnOriginal: false}).lean();
-                                  return responseManager.onSuccess('Story data updated successfully...!', 1, res);
+                                  let newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
+                                  return responseManager.onSuccess('Story added successfully...!' , 1 , res);
+                                }
+                              }else if(pdf_url && pdf_url.trim() != ''){
+                                if(storyId && storyId.trim() != '' && mongoose.Types.ObjectId.isValid(storyId)){
+                                  let storyData = await primary.model(constants.MODELS.stories, storyModel).findById(storyId).lean();
+                                  if(storyData && storyData != null){
+                                    let obj = {
+                                      category: new mongoose.Types.ObjectId(storyCategoryId),
+                                      author_name: author_name,
+                                      title: title,
+                                      header_image: header_image,
+                                      story_brief: story_brief.trim(),
+                                      story_content: '',
+                                      pdf_url: pdf_url.trim(),
+                                      symptomIds: newSymptomIdsArray,
+                                      status: status,
+                                      updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                      updatedAt: new Date()
+                                    };
+                                    let updatedStoryData = await primary.model(constants.MODELS.stories, storyModel).findByIdAndUpdate(storyData._id, obj, {returnOriginal: false}).lean();
+                                    return responseManager.onSuccess('Story data updated successfully...!', 1, res);
+                                  }else{
+                                    return responseManager.badrequest({message: 'Invalid id to story data, Please try again...!'}, res);
+                                  }
                                 }else{
-                                  return responseManager.badrequest({message: 'Invalid id to story data, Please try again...!'}, res);
+                                  let obj = {
+                                    category: new mongoose.Types.ObjectId(storyCategoryId),
+                                    author_name: author_name,
+                                    title: title,
+                                    header_image: header_image,
+                                    story_brief: story_brief.trim(),
+                                    story_content: '',
+                                    pdf_url: pdf_url.trim(),
+                                    symptomIds: newSymptomIdsArray,
+                                    status: status,
+                                    createdBy: new mongoose.Types.ObjectId(adminData._id)
+                                  };
+                                  let newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
+                                  return responseManager.onSuccess('Story added successfully...!' , 1 , res);
                                 }
                               }else{
-                                let obj = {
-                                  category: new mongoose.Types.ObjectId(storyCategoryId),
-                                  author_name: author_name,
-                                  title: title,
-                                  header_image: header_image,
-                                  main_description: main_description.trim(),
-                                  description: description.trim(),
-                                  symptomIds: newSymptomIdsArray,
-                                  status: status,
-                                  createdBy: new mongoose.Types.ObjectId(adminData._id)
-                                };
-                                let newStory = await primary.model(constants.MODELS.stories, storyModel).create(obj);
-                                return responseManager.onSuccess('Story added successfully...!' , 1 , res);
+                                return responseManager.badrequest({message: 'Please provide at least one from both story conclusion or pdf...!'} , res);
                               }
                             }else{
-                              return  responseManager.badrequest({message: 'Invalid ids to get symptom, Please try again...!'} , res);
+                              return responseManager.badrequest({message: 'Please provide only one from story conclusion or pdf...!'}, res);
                             }
-                          })().catch((error) => {
-                            return responseManager.onError(error , res);
-                          });
+                          }else{
+                            return  responseManager.badrequest({message: 'Invalid ids to get symptom, Please try again...!'} , res);
+                          }
+                        })().catch((error) => {
+                          return responseManager.onError(error , res);
                         });
-                      }else{
-                        return responseManager.badrequest({message: 'Add symptoms for story...!'}, res);
-                      }
+                      });
                     }else{
-                      return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
+                      return responseManager.badrequest({message: 'Add symptoms for story...!'}, res);
                     }
                   }else{
-                    return responseManager.badrequest({message: 'Provide author name for story...!'}, res);
+                    return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
                   }
                 }else{
-                  return responseManager.badrequest({message: 'Provide desccription for story...!'}, res);
+                  return responseManager.badrequest({message: 'Provide author name for story...!'}, res);
                 }
               }else{
                 return responseManager.badrequest({message: 'Provide main description for story...!'}, res);
@@ -196,9 +239,9 @@ router.post('/upload' , helper.authenticateToken , upload.single('storyImages') 
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(req.file){
-        if(allowedContentTypes.imagearray.includes(req.file.mimetype) || allowedContentTypes.videoarray.includes(req.file.mimetype)){
-          let sizeOfFileInMB = helper.bytesToMB(req.file.size);
-          if(sizeOfFileInMB <= 20){
+        let sizeOfFileInMB = helper.bytesToMB(req.file.size);
+        if(allowedContentTypes.imagearray.includes(req.file.mimetype)){
+          if(sizeOfFileInMB <= process.env.ALLOWED_IMAGE_UPLOAD_SIZE){
             aws.saveToS3WithName(req.file.buffer, 'Stories', req.file.mimetype, 'image_video').then((result) => {
               let data = {
                 path: result.data.Key,
@@ -208,10 +251,36 @@ router.post('/upload' , helper.authenticateToken , upload.single('storyImages') 
               return responseManager.onError(error, res);
             });
           }else{
-            return responseManager.badrequest({message: 'Image/Video size must be <= 20 MB, Please try again...!'}, res);
+            return responseManager.badrequest({message: 'Image size must be <= 20 MB, Please try again...!'}, res);
+          }
+        }else if(allowedContentTypes.videoarray.includes(req.file.mimetype)){
+          if(sizeOfFileInMB <= process.env.ALLOWED_VIDEO_UPLOAD_SIZE){
+            aws.saveToS3WithName(req.file.buffer, 'Stories', req.file.mimetype, 'image_video').then((result) => {
+              let data = {
+                path: result.data.Key,
+              };
+              return responseManager.onSuccess('Image/video successfully uploaded for story...!', data , res);
+            }).catch((error) => {
+              return responseManager.onError(error, res);
+            });
+          }else{
+            return responseManager.badrequest({message: 'Video size must be <= 100 MB, Please try again...!'}, res);
+          }
+        }else if(allowedContentTypes.docarray.includes(req.file.mimetype)){
+          if(sizeOfFileInMB <= process.env.ALLOWED_PDF_UPLOAD_SIZE){
+            aws.saveToS3WithName(req.file.buffer, 'Stories', req.file.mimetype, 'image_video').then((result) => {
+              let data = {
+                path: result.data.Key,
+              };
+              return responseManager.onSuccess('Image/video successfully uploaded for story...!', data , res);
+            }).catch((error) => {
+              return responseManager.onError(error, res);
+            });
+          }else{
+            return responseManager.badrequest({message: 'Document size must be <= 100 MB, Please try again...!'}, res);
           }
         }else{
-          return responseManager.badrequest({message: 'Invalid file type for image/video...!'}, res);
+          return responseManager.badrequest({message: 'Invalid file type only image/video/doc files allowed, please try again...!'})
         }
       }else{
         return responseManager.badrequest({message: 'Please select image/video for story...!'}, res);

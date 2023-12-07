@@ -17,13 +17,17 @@ let schema = new mongoose.Schema({
 		type: String,
 		require: true
 	},
-	main_description: {
+	story_brief: {
 		type: String,
 		require: true
 	},
-	description: {
+	story_content: {
 		type: String,
-		require: true
+		default: ''
+	},
+	pdf_url: {
+		type: String,
+		default: ''
 	},
 	status: {
 		type:Boolean,

@@ -408,7 +408,7 @@ router.post('/upload' , helper.authenticateToken , upload.single('productImages'
             return responseManager.badrequest({ message: 'Image file must be <= 5 MB, please try again' }, res);
           }
         }else{
-          return responseManager.badrequest({ message: 'Invalid file type only image files allowed for profile pic, please try again' }, res);
+          return responseManager.badrequest({ message: 'Invalid file type only image files allowed for profile pic, please try again...!' }, res);
         }
       }else{
         return responseManager.badrequest({ message: 'Invalid file, please try again' }, res);
