@@ -241,7 +241,7 @@ router.post('/upload' , helper.authenticateToken , upload.single('storyImages') 
       if(req.file){
         let sizeOfFileInMB = helper.bytesToMB(req.file.size);
         if(allowedContentTypes.imagearray.includes(req.file.mimetype)){
-          if(sizeOfFileInMB <= process.env.ALLOWED_IMAGE_UPLOAD_SIZE){
+          if(sizeOfFileInMB <= parseFloat(process.env.ALLOWED_IMAGE_UPLOAD_SIZE)){
             aws.saveToS3WithName(req.file.buffer, 'Stories', req.file.mimetype, 'image_video').then((result) => {
               let data = {
                 path: result.data.Key,
@@ -254,7 +254,7 @@ router.post('/upload' , helper.authenticateToken , upload.single('storyImages') 
             return responseManager.badrequest({message: 'Image size must be <= 20 MB, Please try again...!'}, res);
           }
         }else if(allowedContentTypes.videoarray.includes(req.file.mimetype)){
-          if(sizeOfFileInMB <= process.env.ALLOWED_VIDEO_UPLOAD_SIZE){
+          if(sizeOfFileInMB <= parseFloat(process.env.ALLOWED_VIDEO_UPLOAD_SIZE)){
             aws.saveToS3WithName(req.file.buffer, 'Stories', req.file.mimetype, 'image_video').then((result) => {
               let data = {
                 path: result.data.Key,
@@ -266,13 +266,13 @@ router.post('/upload' , helper.authenticateToken , upload.single('storyImages') 
           }else{
             return responseManager.badrequest({message: 'Video size must be <= 100 MB, Please try again...!'}, res);
           }
-        }else if(allowedContentTypes.docarray.includes(req.file.mimetype)){
-          if(sizeOfFileInMB <= process.env.ALLOWED_PDF_UPLOAD_SIZE){
+        }else if(req.file.mimetype === 'application/pdf'){
+          if(sizeOfFileInMB <= parseFloat(process.env.ALLOWED_PDF_UPLOAD_SIZE)){
             aws.saveToS3WithName(req.file.buffer, 'Stories', req.file.mimetype, 'image_video').then((result) => {
               let data = {
                 path: result.data.Key,
               };
-              return responseManager.onSuccess('Image/video successfully uploaded for story...!', data , res);
+              return responseManager.onSuccess('PDF uploaded successfully for story...!', data , res);
             }).catch((error) => {
               return responseManager.onError(error, res);
             });
@@ -280,7 +280,7 @@ router.post('/upload' , helper.authenticateToken , upload.single('storyImages') 
             return responseManager.badrequest({message: 'Document size must be <= 100 MB, Please try again...!'}, res);
           }
         }else{
-          return responseManager.badrequest({message: 'Invalid file type only image/video/doc files allowed, please try again...!'})
+          return responseManager.badrequest({message: 'Invalid file type only image/video/pdf files allowed, please try again...!'}, res);
         }
       }else{
         return responseManager.badrequest({message: 'Please select image/video for story...!'}, res);

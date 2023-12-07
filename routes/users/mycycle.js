@@ -9,6 +9,18 @@ const userModel = require('../../models/users/users.model');
 const mycycleModel = require('../../models/users/mycycle.model');
 const mongoose = require('mongoose');
 
+// function getTimestampsBetweenDates(startTimestamp, endTimestamp) {
+//     const timestamps = [];
+//     const startDate = new Date(startTimestamp);
+//     startDate.setHours(0, 0, 0, 0);
+//     const endDate = new Date(endTimestamp);
+//     endDate.setHours(23, 59, 59, 999);
+//     for (let currentDate = startDate; currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
+//         timestamps.push(currentDate.getTime());
+//     }
+//     return timestamps;
+// }
+
 router.get('/' , helper.authenticateToken , async (req , res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     res.setHeader('Access-Control-Allow-Origin', '*');
