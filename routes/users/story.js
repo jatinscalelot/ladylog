@@ -55,6 +55,26 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             select: '-createdBy -updatedBy -__v -updatedAt',
             lean: true
           }).then((stories) => {
+            if(savedStory && savedStory != null){
+              async.forEachSeries(stories.docs , (story , next_story) => {
+                const exists = savedStory.story.some(val => val.toString() === story._id.toString());
+                if(exists){
+                  story.is_save = true;
+                }else{
+                  story.is_save = false;
+                }
+                next_story();
+              }, () => {
+                return responseManager.onSuccess('Stories data...!', stories, res);
+              })
+            }else{
+              async.forEachSeries(stories.docs , (story , next_story) => {
+                story.is_save = false;
+                next_story();
+              }, () => {
+                return responseManager.onSuccess('Stories data...!', stories, res);
+              })
+            }
             return responseManager.onSuccess('Stories data...!', stories, res);
           }).catch((error) => {
             return responseManager.onError(error, res);
@@ -76,17 +96,26 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           select: '-createdBy -updatedBy -status -__v -updatedAt',
           lean: true
         }).then((stories) => {
-          async.forEachSeries(stories.docs , (story , next_story) => {
-            const exists = savedStory.story.some(val => val.toString() === story._id.toString());
-            if(exists){
-              story.is_save = true;
-            }else{
+          if(savedStory && savedStory != null){
+            async.forEachSeries(stories.docs , (story , next_story) => {
+              const exists = savedStory.story.some(val => val.toString() === story._id.toString());
+              if(exists){
+                story.is_save = true;
+              }else{
+                story.is_save = false;
+              }
+              next_story();
+            }, () => {
+              return responseManager.onSuccess('Stories data...!', stories, res);
+            })
+          }else{
+            async.forEachSeries(stories.docs , (story , next_story) => {
               story.is_save = false;
-            }
-            next_story();
-          }, () => {
-            return responseManager.onSuccess('Stories data...!', stories, res);
-          })
+              next_story();
+            }, () => {
+              return responseManager.onSuccess('Stories data...!', stories, res);
+            })
+          }
         }).catch((error) => {
           return responseManager.onError(error, res);
         });
@@ -113,13 +142,18 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
           select: '_id category_name'
         }).lean();
         if(storyData && storyData != null && storyData.status === true){
-          const exists = savedStory.story.some(val => val.toString() === storyData._id.toString());
-          if(exists){
-            storyData.is_save = true
+          if(savedStory && savedStory != null){
+            const exists = savedStory.story.some(val => val.toString() === storyData._id.toString());
+            if(exists){
+              storyData.is_save = true
+            }else{
+              storyData.is_save = false;
+            }
+            return responseManager.onSuccess('Story deleted successfully...!', storyData, res);
           }else{
             storyData.is_save = false;
+            return responseManager.onSuccess('Story deleted successfully...!', storyData, res);
           }
-          return responseManager.onSuccess('Story deleted successfully...!', storyData, res);
         }else{
           return responseManager.badrequest({message: 'Invalid storyID to get story, Please try again...!'}, res);
         }
@@ -134,23 +168,37 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-router.get('/savedStory' , helper.authenticateToken , async (req , res) => {
+router.post('/savedStory' , helper.authenticateToken , async (req , res) => {
+  const {page , limit , search} = req.body
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
     if(userData && userData != null && userData.status === true){
-      let savedStoryObj = await primary.model(constants.MODELS.savedstories, userStoryModel).findOne({createdBy: userData._id}).select('story').lean();
-      let savedstories = await primary.model(constants.MODELS.stories, storyModel).find({"_id": {"$in": savedStoryObj.story}}).populate({
-        path: 'category',
-        model: primary.model(constants.MODELS.storymasters, storyMasterModel),
-        select: '_id category_name'
-      }).select('-status -createdBy -updatedBy -createdAt -updatedAt').lean();
-      async.forEachSeries(savedstories, (savedStory, next_savedStory) => {
-        savedStory.is_save = true;
-        next_savedStory();
-      }, () => {
-        return responseManager.onSuccess('Saved story details...!', savedstories , res);
-      });
+      let savedStoryObj = await primary.model(constants.MODELS.savedstories, userStoryModel).findOne({createdBy: userData._id}).lean();
+      if(savedStoryObj && savedStoryObj != null){
+        primary.model(constants.MODELS.stories, storyModel).paginate({
+          _id: {$in: savedStoryObj.story},
+          $or: [
+            {title: {$regex: search, $options: 'i'}}
+          ]
+        }, {
+          page,
+          limit: parseInt(limit),
+          sort: {createdAt: -1},
+          populate: {path: 'category' , model: primary.model(constants.MODELS.storymasters, storyMasterModel) , select: '_id category_name'},
+          select: '-createdBy -updatedBy -status -__v -updatedAt',
+          lean: true
+        }).then((savedstories) => {
+          async.forEachSeries(savedstories.docs, (savedStory, next_savedStory) => {
+            savedStory.is_save = true;
+            next_savedStory();
+          }, () => {
+            return responseManager.onSuccess('Saved story details...!', savedstories , res);
+          });
+        });
+      }else{
+        return responseManager.onSuccess('No saved story...!' , [] , res);
+      }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
     }

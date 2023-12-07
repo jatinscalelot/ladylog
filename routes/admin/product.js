@@ -222,13 +222,13 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                 if(productDetail._id && productDetail._id.trim() != '' && mongoose.Types.ObjectId.isValid(productDetail._id)){
                                   let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(productDetail._id).lean();
                                   if(veriantData && veriantData != null){
-                                    let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                                    let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                                    let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
+                                    let sgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
+                                    let cgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
+                                    let gross_amount = parseFloat(parseFloat(parseFloat(productDetail.price) + cgst + sgst).toFixed(2));
                                     let discounted_amount = 0.0;
                                     let discount = 0;
                                     if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
-                                      discount = parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100);
+                                      discount = parseFloat(parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100).toFixed(2));
                                       discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
                                     }else if(productDetail.discount_amount && !isNaN(productDetail.discount_amount) && parseFloat(productDetail.discount_amount) > 0){
                                       discount = productDetail.discount_amount;
@@ -258,9 +258,9 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                     return responseManager.badrequest({message: 'Invalid id to get variant of product, Please try again...!'}, res);
                                   }
                                 }else{
-                                  let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                                  let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                                  let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
+                                  let sgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
+                                  let cgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
+                                  let gross_amount = parseFloat(parseFloat(parseFloat(productDetail.price) + cgst + sgst).toFixed(2));
                                   let discounted_amount = 0.0;
                                   let discount = 0;
                                   if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
@@ -313,9 +313,9 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                           let newProduct = await primary.model(constants.MODELS.products, productModel).create(productObj);
                           async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
                             (async () => {
-                              let sgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                              let cgst = parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100);
-                              let gross_amount = parseFloat(parseFloat(productDetail.price) + cgst + sgst);
+                              let sgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
+                              let cgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
+                              let gross_amount = parseFloat(parseFloat(parseFloat(productDetail.price) + cgst + sgst).toFixed(2));
                               let discounted_amount = 0.0;
                               let discount = 0;
                               if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
