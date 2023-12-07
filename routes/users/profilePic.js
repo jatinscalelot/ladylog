@@ -22,7 +22,7 @@ router.post('/profilePic' , helper.authenticateToken , upload.single('profile_pi
           if(sizeOfImageInMB <= 5){
             aws.saveToS3(req.file.buffer , userData._id.toString() , req.file.mimetype , 'profiles').then((result) => {
               let data = {
-                path: result.data.Key,
+                profile_pic: result.data.Key,
                 updatedAt: new Date(),
                 updatedBy: new mongoose.Types.ObjectId(userData._id)
               };

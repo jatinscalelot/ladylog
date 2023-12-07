@@ -165,7 +165,7 @@ router.post('/review' , helper.authenticateToken , async (req , res) => {
             limit: parseInt(limit),
             limit: parseInt(limit),
             select: '-updatedBy -updatedAt -__v',
-            populate: {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id name path'},
+            populate: {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id name profile_pic'},
             sort: {createdAt: -1},
             lean: true
           }).then((reviews) => {
