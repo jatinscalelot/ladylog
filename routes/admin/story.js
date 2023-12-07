@@ -91,11 +91,13 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                     if(status === true || status === false){
                       if(symptomIds && Array.isArray(symptomIds) && symptomIds.length > 0){
                         let result = false;
+                        let newSymptomIdsArray = []
                         async.forEachSeries(symptomIds, (symptomId , next_symptomId) => {
                           (async () => {
                             if(symptomId && symptomId.trim() != '' && mongoose.Types.ObjectId.isValid(symptomId)){
                               let symptomData = await primary.model(constants.MODELS.symptoms, symptomModel).findById(symptomId).lean();
                               if(symptomData && symptomData != null && symptomData.status === true){
+                                newSymptomIdsArray.push(symptomData._id);
                                 result = true
                               }else{
                                 result = false
@@ -121,6 +123,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                     header_image: header_image,
                                     main_description: main_description.trim(),
                                     description: description.trim(),
+                                    symptomIds: newSymptomIdsArray,
                                     status: status,
                                     updatedBy: new mongoose.Types.ObjectId(adminData._id),
                                     updatedAt: new Date()
@@ -138,6 +141,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                   header_image: header_image,
                                   main_description: main_description.trim(),
                                   description: description.trim(),
+                                  symptomIds: newSymptomIdsArray,
                                   status: status,
                                   createdBy: new mongoose.Types.ObjectId(adminData._id)
                                 };
