@@ -17,13 +17,15 @@ const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
 const async = require('async');
 
-
-function getAverage(sum , len){
-  return sum/len;
-};
+function capitalizeFirstLetters(inputString) {
+  const words = inputString.split(' ');
+  const capitalizedWords = words.map(word => word.charAt(0).toUpperCase());
+  const resultString = capitalizedWords.join('');
+  return resultString;
+}
 
 async function checkProductDetails(productDetails){
-  let result = false;
+  let valid = false;
   let promise = new Promise(function (resolve , reject) {
     async.forEachSeries(productDetails, (productDetail, next_productDetail) => {
       (async () => {
@@ -35,32 +37,38 @@ async function checkProductDetails(productDetails){
               if(productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0){
                 if((!isNaN(productDetail.discount_per) && productDetail.discount_per >= 0) || (!isNaN(productDetail.discount_amount) && productDetail.discount_amount >= 0)){
                   if(productDetail.status === true || productDetail.status === false){
-                    result = true;
+                    valid = true;
+                    next_productDetail();
                   }else{
-                    result = false
+                    valid = false
+                    reject(new Error({message: 'Invalid product details...!'}));
                   }
                 }else{
-                  result = false;
+                  valid = false;
+                  reject(new Error({message: 'Invalid product details...!'}));
                 }
               }else{
-                result = false;
+                valid = false;
+                reject(new Error({message: 'Invalid product details...!'}));
               }
             }else{
-              result = false;
+              valid = false;
+              reject(new Error({message: 'Invalid product details...!'}));
             }
           }else{
-            result = false
+            valid = false;
+            reject(new Error({message: 'Invalid product details...!'}));
           }
         }else{
-          result = false;
+          valid = false;
+          reject(new Error({message: 'Invalid product details...!'}));
         }
-        next_productDetail();
       })().catch((error) => {
         return responseManager.onError(error , res);
       });
     }, () => {
-      if(result === true){
-        let data = {result: result};
+      if(valid === true){
+        let data = {valid: valid};
         resolve({message: 'Valid product details...!' , data});
       }else{
         reject(new Error({message: 'Invalid product details...!'}));
@@ -76,7 +84,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
-      await primary.model(constants.MODELS.products, productModel).paginate({
+      primary.model(constants.MODELS.products, productModel).paginate({
         $or: [
           {title: {$regex: search, $options: 'i'}}
         ]
@@ -89,7 +97,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
       }).then((products) => {
         async.forEachSeries(products.docs, (product, next_product) => {
           (async () => {
-            let productVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product: product._id , status: true}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
+            let productVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product: product._id , status: true}).select('-createdBy -updatedBy -createdAt -updatedAt -__v').populate({
               path: 'size',
               model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
               select: '_id size_name'
@@ -202,20 +210,20 @@ router.post('/review' , helper.authenticateToken , async (req , res) => {
 });
 
 router.post('/save' , helper.authenticateToken , async (req , res) => {
-  const {productId , title , bannerImage , description , SKUID , productDetails , otherImages , cod , status} = req.body;
+  const {productId , title , bannerImage , description , productDetails , otherImages , cod , status} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token).lean();
+    let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
       if(title && title.trim() != ''){
-        if(bannerImage && bannerImage.trim() != ''){
-          if(description && description.trim() != ''){
-            if(SKUID && SKUID.trim() != ''){
-              if(otherImages && Array.isArray(otherImages) && otherImages.length > 0){
-                if(status === true || status === false){
-                  if(productDetails && Array.isArray(productDetails) && productDetails.length >= 0){
-                    checkProductDetails(productDetails).then(async (result) => {
-                      if(result.data.result === true){
+        if(bannerImage && bannerImage.trim != ''){
+          if(description && description.trim != ''){
+            if(otherImages && Array.isArray(otherImages) && otherImages.length > 0){
+              if(status === true || status === false){
+                if(cod === true || cod === false){
+                  if(productDetails && Array.isArray(productDetails) && productDetails.length > 0){
+                    checkProductDetails(productDetails).then((result) => {
+                      (async () => {
                         if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
                           let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
                           if(productData && productData != null){
@@ -223,9 +231,8 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                               title: title.trim(),
                               bannerImage: bannerImage.trim(),
                               description: description.trim(),
-                              SKUID: SKUID.trim(),
                               otherImages: otherImages,
-                              cod: (cod === true) ? cod : false,
+                              cod: cod,
                               status: status,
                               updatedBy: new mongoose.Types.ObjectId(adminData._id),
                               updatedAt: new Date()
@@ -242,7 +249,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                     let discounted_amount = 0.0;
                                     let discount = 0;
                                     if(productDetail.discount_per && !isNaN(productDetail.discount_per) && parseFloat(productDetail.discount_per) > 0){
-                                      discount = parseFloat(parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100).toFixed(2));
+                                      discount = parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(productDetail.discount_per)) / 100);
                                       discounted_amount = parseFloat(parseFloat(gross_amount) - parseFloat(discount));
                                     }else if(productDetail.discount_amount && !isNaN(productDetail.discount_amount) && parseFloat(productDetail.discount_amount) > 0){
                                       discount = productDetail.discount_amount;
@@ -253,6 +260,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                     let veriantObj = {
                                       product: new mongoose.Types.ObjectId(updatedProduct._id),
                                       size: new mongoose.Types.ObjectId(productDetail.size),
+                                      SKUID: veriantData.SKUID,
                                       stock : parseInt(productDetail.stock),
                                       price : parseFloat(productDetail.price),
                                       sgst : parseFloat(sgst),
@@ -262,16 +270,17 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                       discount_amount : parseFloat(productDetail.discount_amount),
                                       discount : parseFloat(discount),
                                       discounted_amount : parseFloat(discounted_amount),
-                                      status: true,
+                                      status: productDetail.status,
                                       updatedBy: new mongoose.Types.ObjectId(adminData._id),
                                       updatedAt: new Date()
                                     };
                                     let updatedVeriantData = await primary.model(constants.MODELS.veriants, veriantModel).findByIdAndUpdate(veriantData._id , veriantObj , {returnOriginal: false}).lean();
                                     next_productDetail();
                                   }else{
-                                    return responseManager.badrequest({message: 'Invalid id to get variant of product, Please try again...!'}, res);
+                                    return responseManager.badrequest({message: 'Invalid id to get veriant of product...!'}, res);
                                   }
                                 }else{
+                                  let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(productDetail.size).lean();
                                   let sgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
                                   let cgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
                                   let gross_amount = parseFloat(parseFloat(parseFloat(productDetail.price) + cgst + sgst).toFixed(2));
@@ -286,9 +295,13 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                   }else{
                                     discounted_amount = parseFloat(gross_amount);
                                   }
+                                  let makeId = helper.makeid(8);
+                                  let size_name = capitalizeFirstLetters(sizeData.size_name);
+                                  let SKUID = helper.makeSKUID(makeId , size_name);
                                   let veriantObj = {
-                                    product: new mongoose.Types.ObjectId(productData._id),
+                                    product: new mongoose.Types.ObjectId(updatedProduct._id),
                                     size: new mongoose.Types.ObjectId(productDetail.size),
+                                    SKUID: SKUID.trim(),
                                     stock : parseInt(productDetail.stock),
                                     price : parseFloat(productDetail.price),
                                     sgst : parseFloat(sgst),
@@ -298,35 +311,35 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                     discount_amount : parseFloat(productDetail.discount_amount),
                                     discount : parseFloat(discount),
                                     discounted_amount : parseFloat(discounted_amount),
-                                    status: true,
+                                    status: productDetail.status,
                                     createdBy: new mongoose.Types.ObjectId(adminData._id)
                                   };
                                   await primary.model(constants.MODELS.veriants, veriantModel).create(veriantObj);
                                   next_productDetail();
                                 }
                               })().catch((error) => {
-                                return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
+                                return responseManager.onError(error , res);
                               });
                             }, () => {
-                              return responseManager.onSuccess('Product data updated successfully...!', 1 , res);
+                              return responseManager.onSuccess('Product updated successfully...!' , 1 , res);
                             });
                           }else{
-                            return responseManager.badrequest({message: 'Invalid id to get product, Please try again...!'}, res);
+                            return responseManager.badrequest({message: 'Invalid id to get product...!'} , res);
                           }
                         }else{
                           let productObj = {
                             title: title.trim(),
                             bannerImage: bannerImage.trim(),
                             description: description.trim(),
-                            SKUID: SKUID.trim(),
                             otherImages: otherImages,
-                            cod: (cod === true) ? cod : false,
+                            cod: cod,
                             status: status,
                             createdBy: new mongoose.Types.ObjectId(adminData._id),
                           };
                           let newProduct = await primary.model(constants.MODELS.products, productModel).create(productObj);
                           async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
                             (async () => {
+                              let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(productDetail.size).lean();
                               let sgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
                               let cgst = parseFloat(parseFloat(parseFloat(parseFloat(productDetail.price) * 9) / 100).toFixed(2));
                               let gross_amount = parseFloat(parseFloat(parseFloat(productDetail.price) + cgst + sgst).toFixed(2));
@@ -341,9 +354,13 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                               }else{
                                 discounted_amount = parseFloat(gross_amount);
                               }
+                              let makeId = helper.makeid(8);
+                              let size_name = capitalizeFirstLetters(sizeData.size_name);
+                              let SKUID = helper.makeSKUID(makeId , size_name);
                               let veriantObj = {
                                 product: new mongoose.Types.ObjectId(newProduct._id),
                                 size: new mongoose.Types.ObjectId(productDetail.size),
+                                SKUID: SKUID.trim(),
                                 stock : parseInt(productDetail.stock),
                                 price : parseFloat(productDetail.price),
                                 sgst : parseFloat(sgst),
@@ -353,111 +370,26 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                 discount_amount : parseFloat(productDetail.discount_amount),
                                 discount : parseFloat(discount),
                                 discounted_amount : parseFloat(discounted_amount),
-                                status: true,
+                                status: productDetail.status,
                                 createdBy: new mongoose.Types.ObjectId(adminData._id)
                               };
                               await primary.model(constants.MODELS.veriants, veriantModel).create(veriantObj);
                               next_productDetail();
                             })().catch((error) => {
                               return responseManager.onError(error , res);
-                            });
-                          }, () => {
-                            return responseManager.onSuccess('New product added successfully...!', 1 , res);
+                            })
+                          } , () => {
+                            return responseManager.onSuccess('New product added successfully...!' , 1 , res);
                           });
                         }
-                      }else{
-                        return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
-                      }
+                      })().catch((error) => {
+                        return responseManager.onError(error , res);
+                      });
                     }).catch((error) => {
-                      return responseManager.onError(error , res);
-                    });
-                  }else{
-                    return responseManager.badrequest({message: 'Invalid size or stock or price or discount_per or discount_amount, Please try again...!'}, res);
-                  }
-                }else{
-                  return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
-                }
-              }else{
-                return responseManager.badrequest({message: 'Please select at least one other image...!'}, res);
-              }
-            }else{
-              return responseManager.badrequest({message: 'Please provide SKUID for product, Please try again...!'}, res);
-            }
-          }else{
-            return responseManager.badrequest({message: 'Please provide description for product, Please try again...!'}, res);
-          }
-        }else{
-          return responseManager.badrequest({message: 'Please select banner image for product, Please try again...!'}, res);
-        }
-      }else{
-        return responseManager.badrequest({message: 'Invalid title for product, Please try again...!'}, res);
-      }
-    }else{
-      return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-    }
-  }else{
-    return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-  }
-});
-
-router.post('/saveTest' , helper.authenticateToken , async (req , res) => {
-  const {productId , title , bannerImage , description , SKUID , productDetails , otherImages , cod , status} = req.body;
-  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-    let adminData = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
-    if(adminData && adminData != null){
-      if(title && title.trim() != ''){
-        if(bannerImage && bannerImage.trim != ''){
-          if(description && description.trim != ''){
-            if(otherImages && Array.isArray(otherImages) && otherImages.length > 0){
-              if(status === true || status === false){
-                if(cod === true || status === false){
-                  if(SKUID && SKUID.trim() != ''){
-                    if(productDetails && Array.isArray(productDetails) && productDetails.length > 0){
-                      if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
-                        let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
-                        if(productData && productData != null){
-                          let productObj = {
-                            title: title.trim(),
-                            bannerImage: bannerImage.trim(),
-                            description: description.trim(),
-                            SKUID: SKUID.trim(),
-                            otherImages: otherImages,
-                            cod: cod,
-                            status: status,
-                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                            updatedAt: new Date()
-                          };
-                          let updatedProduct = await primary.model(constants.MODELS.products, productModel).findByIdAndUpdate(productObj , productObj , {returnOriginal: false}).lean();
-                          async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
-                          }, () => {
-                            return responseManager.onSuccess('Product updated successfully...!' , 1 , res);
-                          })
-                        }else{
-                          return responseManager.badrequest({message: 'Invalid id to get product...!'} , res);
-                        }
-                      }else{
-                        let productObj = {
-                          title: title.trim(),
-                          bannerImage: bannerImage.trim(),
-                          description: description.trim(),
-                          SKUID: SKUID.trim(),
-                          otherImages: otherImages,
-                          cod: cod,
-                          status: status,
-                          createdBy: new mongoose.Types.ObjectId(adminData._id),
-                        };
-                        let newProduct = await primary.model(constants.MODELS.products, productModel).create(productObj);
-                        async.forEachSeries(productDetails, (productDetail , next_productDetail) => {
-                        } , () => {
-                          return responseManager.onSuccess('New product added successfully...!' , 1 , res);
-                        });
-                      }
-                    }else{ 
-                      return responseManager.badrequest({message: 'Please add at l;east one veriant of product...!'} , res);
-                    }
-                  }else{
-                    return responseManager.badrequest({message: 'Invalid SKUID for product...!'} , res);
+                      return responseManager.badrequest({message: 'Invalid size or stock or price or discount perentage or discount amount or status for product veriant...!'}, res);
+                    })
+                  }else{ 
+                    return responseManager.badrequest({message: 'Please add at least one veriant of product...!'} , res);
                   }
                 }else{
                   return responseManager.badrequest({message: 'Invalid cod status for product...!'} , res);

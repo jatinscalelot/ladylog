@@ -127,3 +127,7 @@ exports.addDaysToTimestamp = (timestamp , days) => {
 exports.bytesToMB = (bytes) => {
     return (bytes / (1024 * 1024)).toFixed(2);
 };  
+exports.makeSKUID = (makeId , size) => {
+    let SKUID = 'LL' + '-' + makeId + '-' + size;
+    return SKUID;
+};

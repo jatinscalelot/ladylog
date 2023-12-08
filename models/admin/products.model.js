@@ -19,10 +19,6 @@ let schema = new mongoose.Schema({
 		type: String,
 		require: true
 	},
-	SKUID: {
-		type: String,
-		require: true
-	},
 	otherImages: [otherImages],
 	cod: {
 		type: Boolean,

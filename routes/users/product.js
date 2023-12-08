@@ -19,7 +19,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let userData = await primary.model(constants.MODELS.users , userModel).findById(req.token._id).lean();
     if(userData && userData != null && userData.status === true){
-      await primary.model(constants.MODELS.products, productModel).paginate({
+      primary.model(constants.MODELS.products, productModel).paginate({
         $or: [
           {title: {$regex: search, $options: 'i'}}
         ],
@@ -33,7 +33,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
       }).then((products) => {
         async.forEachSeries(products.docs, (product, next_product) => {
           (async () => {
-            let productVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product: product._id , status: true}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
+            let productVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product: product._id , status: true}).select('-createdBy -updatedBy -createdAt -updatedAt -__v').populate({
               path: 'size',
               model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
               select: '_id size_name'
@@ -75,7 +75,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
       if(productId && productId.trim() != '' && mongoose.Types.ObjectId.isValid(productId)){
         let productData = await primary.model(constants.MODELS.products , productModel).findById(productId).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
         if(productData && productData != null && productData.status === true){
-          let productVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product: productData._id , status: true}).select('-product -createdBy -updatedBy -createdAt -updatedAt -__v').populate({
+          let productVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product: productData._id , status: true}).select('-createdBy -updatedBy -createdAt -updatedAt -__v').populate({
             path: 'size',
             model: primary.model(constants.MODELS.sizemasters, sizeMasterModel),
             select: '_id size_name'

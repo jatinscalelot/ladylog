@@ -1,12 +1,16 @@
 let mongoose = require("mongoose");
 let mongoosePaginate = require("mongoose-paginate-v2");
 let schema = new mongoose.Schema({
-  product: {
-    type: mongoose.Types.ObjectId,
-    require: true
-  },
+	product: {
+		type: mongoose.Types.ObjectId,
+		require: true
+	},
 	size: {
 		type: mongoose.Types.ObjectId,
+		require: true
+	},
+	SKUID: {
+		type: String,
 		require: true
 	},
 	stock: {
