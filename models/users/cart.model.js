@@ -1,10 +1,6 @@
 let mongoose = require("mongoose");
 let mongoosePaginate = require("mongoose-paginate-v2");
 let schema = new mongoose.Schema({
-  product: {
-    type: mongoose.Types.ObjectId,
-    require: true
-  },
   status: {
     type: Boolean,
     require: true
