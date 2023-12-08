@@ -197,7 +197,19 @@ router.post('/savedStory' , helper.authenticateToken , async (req , res) => {
           });
         });
       }else{
-        return responseManager.onSuccess('No saved story...!' , [] , res);
+        let savedstories = {
+          docs: [],
+          totalDocs: 0,
+          limit: 0,
+          totalPages: 0,
+          page: 0,
+          pagingCounter: 0,
+          hasPrevPage: false,
+          hasNextPage: false,
+          prevPage: null,
+          nextPage: null
+        };
+        return responseManager.onSuccess('No saved story...!' , savedstories , res);
       }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
