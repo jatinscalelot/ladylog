@@ -195,6 +195,8 @@ router.post('/savedStory' , helper.authenticateToken , async (req , res) => {
           }, () => {
             return responseManager.onSuccess('Saved story details...!', savedstories , res);
           });
+        }).catch((error) => {
+          return responseManager.onError(error , res);
         });
       }else{
         let savedstories = {

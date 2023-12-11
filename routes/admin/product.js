@@ -33,7 +33,7 @@ async function checkProductDetails(productDetails){
           let primary = mongoConnection.useDb(constants.DEFAULT_DB);
           let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(productDetail.size).lean();
           if(sizeData && sizeData != null && sizeData.status === true){
-            if(productDetail.stock && !isNaN(productDetail.stock) && productDetail.stock >= 0){
+            if((productDetail.stock || productDetail.stock === 0) && !isNaN(productDetail.stock) && productDetail.stock >= 0){
               if(productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0){
                 if((!isNaN(productDetail.discount_per) && productDetail.discount_per >= 0) || (!isNaN(productDetail.discount_amount) && productDetail.discount_amount >= 0)){
                   if(productDetail.status === true || productDetail.status === false){
