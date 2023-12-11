@@ -19,38 +19,41 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
     if(userData && userData != null && userData.status === true){
-      await primary.model(constants.MODELS.carts, cartModel).paginate({
-        createdBy: userData._id
-      }, {
-        page,
-        limit: parseInt(limit),
-        limit: parseInt(limit),
-        select: '-__v -createdBy -updatedBy -createdAt -updatedAt',
-        populate: {path: 'product' , model: primary.model(constants.MODELS.products, productModel) , select: '-__v -createdBy -updatedBy -createdAt -updatedAt'},
-        sort: {createdAt: -1},
-        lean: true
-      }).then((cartProducts) => {
-        let finalData = [];
-        async.forEachSeries(cartProducts.docs, (cartProduct, next_cartProduct) => {
-          async.forEachSeries(cartProduct.product.productDetails, (productDetail, next_productDetail) => {
-            (async () => {
-              let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(productDetail.size).lean();
-              cartProduct.product.productDetails
-              productDetail.productsize = sizeData;
-              console.log('productDetail :',productDetail);
-            })().catch((error) => { });
-            next_productDetail();
-          }, () => {
-            finalData.push(cartProduct);
-            next_cartProduct();
-          });
-        }, () => {
-          cartProducts.docs = finalData;
-          return responseManager.onSuccess('Product reviews...!', cartProducts , res);
+      let cartProductsData = await primary.model(constants.MODELS.carts, cartModel).findOne({createdBy: userData._id , status: true}).lean();
+      if(cartProductsData && cartProductsData != null && cartProductsData.status === true){
+        primary.model(constants.MODELS.veriants, veriantModel).paginate({
+          _id: {$in: cartProductsData.cart_products}
+        }, {
+          page,
+          limit: parseInt(limit),
+          limit: parseInt(limit),
+          select: '-__v -createdBy -updatedBy -createdAt -updatedAt',
+          populate: [
+            {path: 'product' , model: primary.model(constants.MODELS.products, productModel) , select: '-__v -createdBy -updatedBy -createdAt -updatedAt'},
+            {path: 'size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'},
+          ],
+          sort: {createdAt: -1},
+          lean: true
+        }).then((cartProducts) => {
+          return responseManager.onSuccess('Cart products details...!' , cartProducts , res);
+        }).catch((error) => {
+          return responseManager.onError(error , res);
         });
-      }).catch((error) => {
-        return responseManager.onError(error , res);
-      });
+      }else{
+        let cartProducts = {
+          docs: [],
+          totalDocs: 0,
+          limit: 0,
+          totalPages: 0,
+          page: 0,
+          pagingCounter: 0,
+          hasPrevPage: false,
+          hasNextPage: false,
+          prevPage: null,
+          nextPage: null
+        };
+        return responseManager.onSuccess('No cart products found...!' , cartProducts , res);
+      }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
     }
@@ -80,16 +83,13 @@ router.post('/save' , helper.authenticateToken ,  async (req , res) => {
                 next_cart_product();
               }, () => {
                 (async () => {
-                  console.log('updatedCartProductsArray :', updatedCartProductsArray);
                   let obj = {
                     cart_products: updatedCartProductsArray,
                     status: true,
                     updatedBy: new mongoose.Types.ObjectId(userData._id),
                     updatedAt: new Date()
                   };
-                  console.log('obj :', obj);
                   let updatedCartProducts = await primary.model(constants.MODELS.carts, cartModel).findByIdAndUpdate(cartProducts._id , obj , {returnOriginal: false}).lean();
-                  console.log('updatedCartProducts :', updatedCartProducts);
                   return responseManager.onSuccess('Product remove from the cart successfully...!' , 1 , res);
                 })().catch((error) => {
                   return responseManager.onError(error , res);
@@ -104,9 +104,7 @@ router.post('/save' , helper.authenticateToken ,  async (req , res) => {
                 updatedBy: new mongoose.Types.ObjectId(userData._id),
                 updatedAt: new Date()
               };
-              console.log('obj :', obj);
               let updatedCartProducts = await primary.model(constants.MODELS.carts, cartModel).findByIdAndUpdate(cartProducts._id , obj , {returnOriginal: false}).lean();
-              console.log('updatedCartProducts :', updatedCartProducts);
               return responseManager.onSuccess('Product added in cart successfully...!' , 1 , res);
             }
           }else{
@@ -116,11 +114,10 @@ router.post('/save' , helper.authenticateToken ,  async (req , res) => {
               createdBy: userData._id
             };
             let newCart = await primary.model(constants.MODELS.carts, cartModel).create(obj);
-            console.log('newCart :', newCart);
             return responseManager.onSuccess('Product added in cart successfully...!' , 1 , res);
           }
         }else{
-          return responseManager.badrequest({message: 'Invalid id to get product, Please try again...!'}, res);
+          return responseManager.badrequest({message: 'Invalid id to get product veriant, Please try again...!'}, res);
         }
       }else{
         return responseManager.badrequest({message: 'Invalid id to get product veriant, Please try again...!'}, res);
