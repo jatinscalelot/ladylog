@@ -11,7 +11,7 @@ let schema = new mongoose.Schema({
   },
   description: {
     type: String,
-    require: true
+    default: ''
   },
 	createdBy: {
 		type: mongoose.Types.ObjectId,
