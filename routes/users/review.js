@@ -58,18 +58,14 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
         let productData = await primary.model(constants.MODELS.products, productModel).findById(productId).lean();
         if(productData && productData != null && productData.status === true){
           if(rating >= 0 && rating <= 5){
-            if(description && description.trim() != ''){
-              let obj = {
-                product: new mongoose.Types.ObjectId(productData._id),
-                rating: rating,
-                description: description,
-                createdBy: new mongoose.Types.ObjectId(userData._id)
-              };
-              let review = await primary.model(constants.MODELS.reviews, reviewModel).create(obj);
-              return responseManager.onSuccess('Review added successfully...!' , 1 , res);
-            }else{
-              return responseManager.badrequest({message: 'Please provide description for review...!'}, res);
-            }
+            let obj = {
+              product: new mongoose.Types.ObjectId(productData._id),
+              rating: rating,
+              description: (description && description.trim() != '') ? description : '',
+              createdBy: new mongoose.Types.ObjectId(userData._id)
+            };
+            let review = await primary.model(constants.MODELS.reviews, reviewModel).create(obj);
+            return responseManager.onSuccess('Review added successfully...!' , 1 , res);
           }else{
             return responseManager.badrequest({message: 'Invalid rating, Please try again...!'}, res);
           }
