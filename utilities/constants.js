@@ -3,6 +3,7 @@ let constants = {
     MODELS: {
         admins: 'admins',
         users: 'users',
+        addresses: 'addresses',
         symptoms: 'symptoms',
         symptomMasters: 'symptomMasters',
         usersymptoms: 'usersymptoms',
