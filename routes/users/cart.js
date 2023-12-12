@@ -13,6 +13,43 @@ const sizeMasterModel = require('../../models/admin/size.master');
 const cartModel = require('../../models/users/cart.model');
 const async = require('async');
 
+async function difference(arr1, arr2) {
+  const result = [];
+	let i = 0,
+		j = 0;
+	let flag = false;
+	for (i = 0; i < arr1.length; i++) {
+		j = 0;
+		flag = false;
+		while (j != arr2.length) {
+			if (arr1[i] == arr2[j]) {
+				flag = true;
+				break;
+			}
+			j++;
+		}
+		if (!flag) {
+			result.push(arr1[i]);
+		}
+	}
+	flag = false;
+	for (i = 0; i < arr2.length; i++) {
+		j = 0;
+		flag = false;
+		while (j != arr1.length) {
+			if (arr2[i] == arr1[j]) {
+				flag = true;
+				break;
+			}
+			j++;
+		}
+		if (!flag) {
+			result.push(arr2[i]);
+		}
+	}
+	return result;
+}
+
 router.post('/' , helper.authenticateToken , async (req , res) => {
   const {page , limit} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
@@ -62,73 +99,6 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
   }
 });
 
-// router.post('/save' , helper.authenticateToken ,  async (req , res) => {
-//   const {veriantId} = req.body;
-//   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-//     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-//     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
-//     if(userData && userData != null && userData.status === true){
-//       if(veriantId && veriantId.trim() != '' && mongoose.Types.ObjectId.isValid(veriantId)){
-//         let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(veriantId).lean();
-//         if(veriantData && veriantData != null && veriantData.status === true){
-//           let cartProducts = await primary.model(constants.MODELS.carts, cartModel).findOne({createdBy: userData._id}).lean();
-//           if(cartProducts && cartProducts != null){
-//             const exists = cartProducts.cart_products.some(val => val.toString() === veriantData._id.toString());
-//             if(exists){
-//               let updatedCartProductsArray = [];
-//               async.forEachSeries(cartProducts.cart_products, (cart_product , next_cart_product) => {
-//                 if(cart_product.toString() !== veriantData._id.toString()){
-//                   updatedCartProductsArray.push(new mongoose.Types.ObjectId(cart_product));
-//                 }
-//                 next_cart_product();
-//               }, () => {
-//                 (async () => {
-//                   let obj = {
-//                     cart_products: updatedCartProductsArray,
-//                     status: true,
-//                     updatedBy: new mongoose.Types.ObjectId(userData._id),
-//                     updatedAt: new Date()
-//                   };
-//                   let updatedCartProducts = await primary.model(constants.MODELS.carts, cartModel).findByIdAndUpdate(cartProducts._id , obj , {returnOriginal: false}).lean();
-//                   return responseManager.onSuccess('Product remove from the cart successfully...!' , 1 , res);
-//                 })().catch((error) => {
-//                   return responseManager.onError(error , res);
-//                 });
-//               });
-//             }else{
-//               let updatedCartProductsArray = cartProducts.cart_products;
-//               updatedCartProductsArray.push(veriantData._id);
-//               let obj = {
-//                 cart_products: updatedCartProductsArray,
-//                 status: true,
-//                 updatedBy: new mongoose.Types.ObjectId(userData._id),
-//                 updatedAt: new Date()
-//               };
-//               let updatedCartProducts = await primary.model(constants.MODELS.carts, cartModel).findByIdAndUpdate(cartProducts._id , obj , {returnOriginal: false}).lean();
-//               return responseManager.onSuccess('Product added in cart successfully...!' , 1 , res);
-//             }
-//           }else{
-//             let obj = {
-//               cart_products: [veriantData._id],
-//               status: true,
-//               createdBy: userData._id
-//             };
-//             let newCart = await primary.model(constants.MODELS.carts, cartModel).create(obj);
-//             return responseManager.onSuccess('Product added in cart successfully...!' , 1 , res);
-//           }
-//         }else{
-//           return responseManager.badrequest({message: 'Invalid id to get product veriant, Please try again...!'}, res);
-//         }
-//       }else{
-//         return responseManager.badrequest({message: 'Invalid id to get product veriant, Please try again...!'}, res);
-//       }
-//     }else{
-//       return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
-//     }
-//   }else{
-//     return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
-//   }
-// });
 router.post('/save' , helper.authenticateToken ,  async (req , res) => {
   const {veriantIds} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
@@ -138,17 +108,16 @@ router.post('/save' , helper.authenticateToken ,  async (req , res) => {
       if(veriantIds && Array.isArray(veriantIds) && veriantIds.length > 0){
         let cartProducts = await primary.model(constants.MODELS.carts, cartModel).findOne({createdBy: userData._id}).lean();
         if(cartProducts && cartProducts != null){
-          let finalCartProductsArray = [];
+          let newCartProductArray = [];
+          let oldCartProductArray = cartProducts.cart_products;
           async.forEachSeries(veriantIds, (veriantId , next_veriantId) => {
             (async () => {
               if(veriantId && veriantId.trim() != '' && mongoose.Types.ObjectId.isValid(veriantId)){
                 const veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(veriantId).lean();
                 if(veriantData && veriantData != null && veriantData.status === true){
-                  const exists = cartProducts.cart_products.some(val => val.toString() === veriantData._id.toString());
-                  if(!(exists)){
-                    finalCartProductsArray.push(new mongoose.Types.ObjectId(veriantData._id));
-                  }else{
-                    finalCartProductsArray.push(new mongoose.Types.ObjectId(cart)) // chnages progress here
+                  const existInNewCartProductsArray = newCartProductArray.some(val => val.toString() === veriantData._id.toString());
+                  if(!(existInNewCartProductsArray)){
+                    newCartProductArray.push(new mongoose.Types.ObjectId(veriantData._id));
                   }
                   next_veriantId();
                 }else{
@@ -162,19 +131,21 @@ router.post('/save' , helper.authenticateToken ,  async (req , res) => {
             });
           }, () => {
             (async () => {
-              let obj = {
-                cart_products: finalCartProductsArray,
+              let oldCartProductArrayToString = oldCartProductArray.map(String);
+              let newCartProductArrayToString = newCartProductArray.map(String);
+              let finalCartProductsArrayInString = await difference(oldCartProductArrayToString , newCartProductArrayToString);
+              let obj = { 
+                cart_products: Array.from(finalCartProductsArrayInString , (id) => new mongoose.Types.ObjectId(id)),
                 status: true,
                 updatedBy: new mongoose.Types.ObjectId(userData._id),
                 updatedAt: new Date()
               };
               let updatedCartProducts = await primary.model(constants.MODELS.carts, cartModel).findByIdAndUpdate(cartProducts._id , obj , {returnOriginal: false});
-              console.log('updatedCartProducts :',updatedCartProducts);
               return responseManager.onSuccess('Cart products updated successfully...!' , 1 , res);
             })().catch((error) => {
               return responseManager.onError(error , res);
             });
-          })
+          });
         }else{
           let finalCartProductsArray = [];
           async.forEachSeries(veriantIds, (veriantId , next_veriantId) => {
