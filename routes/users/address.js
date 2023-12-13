@@ -51,60 +51,54 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                         const url = process.env.POSTAL_PIN_CODE_API + pincode;
                         let result = await axios.get(url);
                         if(result && result.status === 200 && result.data[0].Status === 'Success' && result.data[0].PostOffice.length > 0){
-                            if(land_mark && land_mark.trim() != ''){
-                                if(city && city.trim() != ''){
-                                    if(state && state.trim() != ''){
-                                        if(country && country.trim() != ''){
-                                            if(status === true || status === false){
-                                                if(addressId && addressId.trim() != '' && mongoose.Types.ObjectId.isValid(addressId)){
-                                                    let addressData = await primary.model(constants.MODELS.addresses, addressModel).findOne({_id: new mongoose.Types.ObjectId(addressId) , createdBy: userData._id}).lean();
-                                                    if(addressData && addressData != null && addressData.status === true){
-                                                        let obj = {
-                                                            floor_no: floor,
-                                                            building_name: building_name,
-                                                            pincode: pincode,
-                                                            land_mark: land_mark,
-                                                            city: city,
-                                                            state: state,
-                                                            country: country,
-                                                            status: status,
-                                                            updatedBy: new mongoose.Types.ObjectId(userData._id),
-                                                            updatedAt: new Date()
-                                                        };
-                                                        let updatedAddressData = await primary.model(constants.MODELS.addresses, addressModel).findByIdAndUpdate(addressData._id , obj , {returnOriginal: false});
-                                                        return responseManager.onSuccess('Address updatd successfully...!', 1 , res);
-                                                    }else{
-                                                        return responseManager.badrequest({message: 'Invalid id to get address, Please try again...!'}, res);
-                                                    }
-                                                }else{
+                            if(city && city.trim() != ''){
+                                if(state && state.trim() != ''){
+                                    if(country && country.trim() != ''){
+                                        if(status === true || status === false){
+                                            if(addressId && addressId.trim() != '' && mongoose.Types.ObjectId.isValid(addressId)){
+                                                let addressData = await primary.model(constants.MODELS.addresses, addressModel).findOne({_id: new mongoose.Types.ObjectId(addressId) , createdBy: userData._id}).lean();
+                                                if(addressData && addressData != null && addressData.status === true){
                                                     let obj = {
                                                         floor_no: floor,
                                                         building_name: building_name,
                                                         pincode: pincode,
-                                                        land_mark: land_mark,
                                                         city: city,
                                                         state: state,
                                                         country: country,
                                                         status: status,
-                                                        createdBy: new mongoose.Types.ObjectId(userData._id),
+                                                        updatedBy: new mongoose.Types.ObjectId(userData._id),
+                                                        updatedAt: new Date()
                                                     };
-                                                    let newAddress = await primary.model(constants.MODELS.addresses, addressModel).create(obj);
-                                                    return responseManager.onSuccess('Address added successfully...!', 1 , res);
+                                                    let updatedAddressData = await primary.model(constants.MODELS.addresses, addressModel).findByIdAndUpdate(addressData._id , obj , {returnOriginal: false});
+                                                    return responseManager.onSuccess('Address updatd successfully...!', 1 , res);
+                                                }else{
+                                                    return responseManager.badrequest({message: 'Invalid id to get address, Please try again...!'}, res);
                                                 }
                                             }else{
-                                                return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
+                                                let obj = {
+                                                    floor_no: floor,
+                                                    building_name: building_name,
+                                                    pincode: pincode,
+                                                    city: city,
+                                                    state: state,
+                                                    country: country,
+                                                    status: status,
+                                                    createdBy: new mongoose.Types.ObjectId(userData._id),
+                                                };
+                                                let newAddress = await primary.model(constants.MODELS.addresses, addressModel).create(obj);
+                                                return responseManager.onSuccess('Address added successfully...!', 1 , res);
                                             }
                                         }else{
-                                            return responseManager.badrequest({message: 'Please enter country name...!'}, res);
+                                            return responseManager.badrequest({message: 'Invalid status, Please try again...!'}, res);
                                         }
                                     }else{
-                                        return responseManager.badrequest({message: 'Please enter state name...!'}, res);
+                                        return responseManager.badrequest({message: 'Please enter country name...!'}, res);
                                     }
                                 }else{
-                                    return responseManager.badrequest({message: 'Please enter city name...!'}, res);
+                                    return responseManager.badrequest({message: 'Please enter state name...!'}, res);
                                 }
                             }else{
-                                return responseManager.badrequest({message: 'Invalid land mark for enter pincode...!'}, res);
+                                return responseManager.badrequest({message: 'Please enter city name...!'}, res);
                             }
                         }else{
                             return responseManager.badrequest({message: 'Please enter valid pincode...!'}, res);
