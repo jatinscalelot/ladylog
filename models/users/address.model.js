@@ -13,6 +13,10 @@ let schema = new mongoose.Schema({
         type: String,
         require: true
     },
+    land_mark: {
+        type: String,
+        default: ''
+    },
     city: {
         type: String,
         require: true
