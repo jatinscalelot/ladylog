@@ -72,7 +72,20 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
           sort: {createdAt: -1},
           lean: true
         }).then((cartProducts) => {
-          return responseManager.onSuccess('Cart products details...!' , cartProducts , res);
+          let finalProducts = [];
+          async.forEachSeries(cartProducts.docs, (product, next_product) => {
+            ( async () => {
+              let allproductVariants = await primary.model(constants.MODELS.veriants, veriantModel).find({product : new mongoose.Types.ObjectId(product.product._id)}).populate({path : 'size', model : primary.model(constants.MODELS.sizemasters, sizeMasterModel), select : "size_name"}).lean();
+              product.veriants = allproductVariants;
+              finalProducts.push(product);
+              next_product();
+            })().catch((error) => {
+              return responseManager.onError(error , res);
+            });
+          }, () => {
+            cartProducts.docs = finalProducts;
+            return responseManager.onSuccess('Cart products details...!' , cartProducts , res);
+          });
         }).catch((error) => {
           return responseManager.onError(error , res);
         });
