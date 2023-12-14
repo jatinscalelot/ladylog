@@ -128,6 +128,14 @@ exports.bytesToMB = (bytes) => {
     return (bytes / (1024 * 1024)).toFixed(2);
 };  
 exports.makeSKUID = (makeId , size) => {
-    let SKUID = 'LL' + '-' + makeId + '-' + size;
+    let SKUID = 'LL' + makeId + size;
     return SKUID;
+};
+exports.generateOrderId = (orderNumber) => {
+    const currentDate = new Date();
+    const year = currentDate.getFullYear().toString();
+    const month = (currentDate.getMonth() + 1).toString();
+    const date = currentDate.getDate().toString();
+    const orderId = 'LL' + year + date + month + orderNumber.toString();
+    return orderId;
 };

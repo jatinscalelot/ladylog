@@ -61,6 +61,7 @@ const userpaths = [
   { pathUrl: '/stories', routerFile: 'story' },
   { pathUrl: '/products', routerFile: 'product' },
   { pathUrl: '/cart', routerFile: 'cart' },
+  { pathUrl: '/order', routerFile: 'order' },
   { pathUrl: '/review', routerFile: 'review' },
 ];
 userpaths.forEach((path) => {

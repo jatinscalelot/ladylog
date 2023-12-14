@@ -11,6 +11,7 @@ let constants = {
         products: 'products',
         veriants: 'veriants',
         carts: 'carts',
+        orders: 'orders',
         reviews: 'reviews',
         storymasters: 'storymasters',
         stories: 'stories',

@@ -20,7 +20,7 @@ router.post('/', async (req, res) => {
                 let obj = {
                     user_id: decodedToken.user_id,
                     mobile: decodedToken.phone_number,
-                    fcm_token: (fcm_token) ? fcm_token.trim() : '',
+                    fcm_token: (fcm_token && fcm_token.trim() != '') ? fcm_token.trim() : '',
                     is_parent: true,
                     parentId: null,
                     exp: decodedToken.exp,
