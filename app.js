@@ -39,6 +39,7 @@ const adminpaths = [
   {pathUrl: '/symptomMaster', routerFile: 'symptomMaster'},
   {pathUrl: '/symptoms', routerFile: 'symptoms'},
   {pathUrl: '/products', routerFile: 'product'},
+  {pathUrl: '/order', routerFile: 'order'},
   {pathUrl: '/storyMaster', routerFile: 'storyMaster'},
   {pathUrl: '/stories', routerFile: 'story'},
   {pathUrl: '/sizeMaster', routerFile: 'sizeMaster'},
