@@ -126,19 +126,27 @@ router.post('/veriant' , helper.authenticateToken , async (req , res) => {
               const cartProductsArray = cartProductsData.cart_products;
               const existInCartProductsArray = cartProductsArray.some(val => val.toString() === veriantData._id.toString());
               if(existInCartProductsArray){
-                veriantData.is_cart = true;
-                return responseManager.onSuccess('veriant data...!' , veriantData , res);
+                let data = {
+                  is_cart: true
+                };
+                return responseManager.onSuccess('veriant data...!' , data , res);
               }else{
-                veriantData.is_cart = false;
-                return responseManager.onSuccess('veriant data...!' , veriantData , res);
+                let data = {
+                  is_cart: false
+                };
+                return responseManager.onSuccess('veriant data...!' , data , res);
               }
             }else{
-              veriantData.is_cart = false;
-              return responseManager.onSuccess('veriant data...!' , veriantData , res);
+              let data = {
+                  is_cart: false
+                };
+              return responseManager.onSuccess('veriant data...!' , data , res);
             }
           }else{
-            veriantData.is_cart = false;
-            return responseManager.onSuccess('veriant data...!' , veriantData , res);
+            let data = {
+                  is_cart: false
+                };
+            return responseManager.onSuccess('veriant data...!' , data , res);
           }
         }else{
           return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
