@@ -64,6 +64,7 @@ const userpaths = [
   { pathUrl: '/cart', routerFile: 'cart' },
   { pathUrl: '/order', routerFile: 'order' },
   { pathUrl: '/review', routerFile: 'review' },
+  { pathUrl: '/reminder', routerFile: 'reminder' },
 ];
 userpaths.forEach((path) => {
   app.use('/user' + path.pathUrl, require('./routes/users/' + path.routerFile));

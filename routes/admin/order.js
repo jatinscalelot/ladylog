@@ -37,6 +37,31 @@ router.get('/count' , helper.authenticateToken , async (req , res) => {
     }
 });
 
+router.post('/getone' , helper.authenticateToken , async (req , res) => {
+    const {orderId} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            if(orderId && orderId.trim() != ''){
+                let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
+                if(orderData && orderData != null){
+                    return responseManager.onSuccess('Order details...!' , orderData , res);
+                }else{
+                    return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+                }
+            }else{
+                return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+            }
+        }else{            
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
+
+
 router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
     const {page , limit} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){

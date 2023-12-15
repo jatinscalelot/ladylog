@@ -11,6 +11,7 @@ const productModel = require('../../models/admin/products.model');
 const veriantModel = require('../../models/admin/veriants.model');
 const reviewModel = require('../../models/users/review.model');
 const sizeMasterModel = require('../../models/admin/size.master');
+const cartModel = require('../../models/users/cart.model');
 const async = require('async');
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
@@ -93,6 +94,52 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
             productData.ratings = 0.0;
           }
           return responseManager.onSuccess('Product details...!' , productData , res);
+        }else{
+          return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
+        }
+      }else{
+        return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
+      }
+    }else{
+      return responseManager.badrequest({message: 'Invalid token to get user, please try again...!'}, res);
+    }
+  }else{
+    return responseManager.badrequest({message: 'Invalid token to get user, please try again...!'}, res);
+  }
+});
+
+router.post('/veriant' , helper.authenticateToken , async (req , res) => {
+  const {veriantId} = req.body;
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let userData = await primary.model(constants.MODELS.users , userModel).findById(req.token._id).lean();
+    if(userData && userData != null){
+      if(veriantId && veriantId.trim() != '' && mongoose.Types.ObjectId.isValid(veriantId)){
+        let veriantData = await primary.model(constants.MODELS.veriants , veriantModel).findById(veriantId).populate([
+          {path: 'product' , model: primary.model(constants.MODELS.products, productModel) , select: '-createdBy -updatedBy -createdAt -updatedAt -__v'},
+          {path: 'size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'},
+        ]).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+        if(veriantData && veriantData != null && veriantData.status === true){
+          let cartProductsData = await primary.model(constants.MODELS.carts, cartModel).findOne({createdBy: userData._id , status: true}).lean();
+          if(cartProductsData && cartProductsData != null){
+            if(cartProductsData.cart_products.length > 0){
+              const cartProductsArray = cartProductsData.cart_products;
+              const existInCartProductsArray = cartProductsArray.some(val => val.toString() === veriantData._id.toString());
+              if(existInCartProductsArray){
+                veriantData.is_cart = true;
+                return responseManager.onSuccess('veriant data...!' , veriantData , res);
+              }else{
+                veriantData.is_cart = false;
+                return responseManager.onSuccess('veriant data...!' , veriantData , res);
+              }
+            }else{
+              veriantData.is_cart = false;
+              return responseManager.onSuccess('veriant data...!' , veriantData , res);
+            }
+          }else{
+            veriantData.is_cart = false;
+            return responseManager.onSuccess('veriant data...!' , veriantData , res);
+          }
         }else{
           return responseManager.badrequest({message: 'Invalid producId to get product details, please try again...!'}, res);
         }
