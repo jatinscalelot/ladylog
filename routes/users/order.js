@@ -133,7 +133,8 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                         veriants: finalVeriants,
                                         paymentId: paymentId.trim(),
                                         addressId: new mongoose.Types.ObjectId(addressData._id),
-                                        is_pending: true,
+                                        fullfill_status: 'pending',
+                                        financial_status: 'accept',
                                         createdBy: new mongoose.Types.ObjectId(userData._id)
                                     };
                                     let newOrder = await primary.model(constants.MODELS.orders, orderModel).create(orderObj);

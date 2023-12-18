@@ -69,7 +69,7 @@ router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
             primary.model(constants.MODELS.orders, orderModel).paginate({
-                is_pending: true
+                fullfill_status: 'pending'
             },{
                 page,
                 limit: parseInt(limit),
@@ -78,7 +78,43 @@ router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
             }).then((pendingOrders) => {
-                return responseManager.onSuccess('Pending orders...!' , pendingOrders , res);
+                async.forEachSeries(pendingOrders.docs, (pendingOrder , next_pendingOrder) => {
+                    ( async () => {
+                        let totalObject = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+                            {$match: {_id: pendingOrder._id}},
+                            {$unwind: '$veriants'},
+                            {$group: {
+                                _id: null,
+                                totalPrice: {$sum: '$veriants.price'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
+                                totalQuantity: {$sum: '$veriants.quantity'},
+                                totalSGST: {$sum: '$veriants.sgst'},
+                                totalCGST: {$sum: '$veriants.cgst'},
+                            }}
+                        ]);
+                        if(totalObject && totalObject.length > 0){
+                            pendingOrder.totalPrice = parseFloat(parseFloat(totalObject[0].totalPrice).toFixed(2));
+                            pendingOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            pendingOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            pendingOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
+                            pendingOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                            pendingOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                        }else{
+                            pendingOrder.totalPrice = 0;
+                            pendingOrder.totalQuantity = 0;
+                            pendingOrder.totalTax = 0;
+                            pendingOrder.totalDiscount = 0;
+                            pendingOrder.totalDiscountendPrice = 0;
+                            pendingOrder.totalPay = 0;
+                        }
+                        next_pendingOrder();
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('Pending orders...!' , pendingOrders , res);
+                });
             }).catch((error) => {
                 return responseManager.onError(error , res);
             });

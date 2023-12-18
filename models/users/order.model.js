@@ -64,33 +64,13 @@ let schema = new mongoose.Schema({
 		type: mongoose.Types.ObjectId,
 		require: true
 	},
-    is_pending: {
-        type: Boolean,
-        default: true
+    fullfill_status: {
+        type: String,
+        enum: ['pending' , 'ready_to_ship' , 'shipped' , 'delivered' , 'rto' , 'cancelled']
     },
-    is_conform: {
-        type: Boolean,
-        default: false
-    },
-    is_cancelled: {
-        type: Boolean,
-        default: false
-    },
-    is_read_to_ship: {
-        type: Boolean,
-        default: false
-    },
-    is_shipped: {
-        type: Boolean,
-        default: false
-    },
-    is_delivered: {
-        type: Boolean,
-        default: false
-    },
-    is_rto: {
-        type: Boolean,
-        default: false
+    financial_status: {
+        type: String,
+        enum: ['accept' , 'pending' , 'refund']
     },
     is_download: {
         type: Boolean,
