@@ -135,7 +135,7 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
                                         }
                                     }
                                 }else{
-        
+                                    return responseManager.badrequest({message: 'Invalid value for repeat...!'}, res);
                                 }
                             }else{
                                 return responseManager.badrequest({message: 'Please provide note (<=50 character) for reminder...!'}, res);
