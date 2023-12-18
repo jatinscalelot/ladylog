@@ -9,6 +9,7 @@ const helper = require('../../utilities/helper');
 const userModel = require('../../models/users/users.model');
 const reminderMasterModel = require('../../models/admin/reminder.master');
 const reminderModel = require('../../models/users/reminder.model');
+const async = require('async');
 
 function isValidTime(str) {
     let regex = new RegExp(/((1[0-2]|0?[1-9]):([0-5][0-9]) ?([AaPp][Mm]))/);
@@ -29,7 +30,25 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
         let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
         if(userData && userData != null && userData.status === true){
             let allReminders = await primary.model(constants.MODELS.remindermasters, reminderMasterModel).find({status: true}).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
-            return responseManager.onSuccess('Reminder list...!', allReminders , res);
+            async.forEachSeries(allReminders, (reminder , next_reminder) => {
+                ( async () => {
+                    let userReminderData = await primary.model(constants.MODELS.reminders , reminderModel).findOne({reminder: new mongoose.Types.ObjectId(reminder._id) , createdBy: new mongoose.Types.ObjectId(userData._id)}).lean();
+                    if(userReminderData && userReminderData != null){
+                        if(userReminderData.reminder_on === true){
+                            reminder.is_on = true;
+                        }else{
+                            reminder.is_on = false;
+                        }
+                    }else{
+                        reminder.is_on = false;
+                    }
+                    next_reminder();
+                })().catch((error) => {
+                    return responseManager.onError(error , res);
+                });
+            }, () => {
+                return responseManager.onSuccess('Reminder list...!', allReminders , res);
+            });
         }else{            
             return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
         }
