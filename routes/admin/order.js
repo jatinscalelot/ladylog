@@ -87,7 +87,7 @@ router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
             },{
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -createdAt -updatedAt -__v',
+                select: '-createdBy -updatedBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -223,7 +223,7 @@ router.post('/readyToShipOrders' , helper.authenticateToken , async (req , res) 
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -createdAt -updatedAt -__v',
+                select: '-createdBy -updatedBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -362,7 +362,7 @@ router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) =>
             },{
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -createdAt -__v',
+                select: '-createdBy -updatedBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
