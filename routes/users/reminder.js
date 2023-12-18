@@ -36,11 +36,14 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     if(userReminderData && userReminderData != null){
                         if(userReminderData.reminder_on === true){
                             reminder.is_on = true;
+                            reminder.time = userReminderData.reminder_time;
                         }else{
                             reminder.is_on = false;
+                            reminder.time = '';
                         }
                     }else{
                         reminder.is_on = false;
+                        reminder.time = '';
                     }
                     next_reminder();
                 })().catch((error) => {
@@ -55,6 +58,26 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
     }else{
         return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
     } 
+});
+
+router.post('/getone' , helper.authenticateToken , async (req , res) => {
+    const {reminderId} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+        if(userData && userData != null && userData.status === true){
+            let userReminderData = await primary.model(constants.MODELS.reminders , reminderModel).findOne({reminder: new mongoose.Types.ObjectId(reminderId) , createdBy: new mongoose.Types.ObjectId(userData._id)}).populate({
+                path: 'reminder',
+                model: primary.model(constants.MODELS.remindermasters , reminderMasterModel),
+                select: '_id reminder_name'
+            }).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+            return responseManager.onSuccess('User reminder data...!' , userReminderData , res);
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+    }
 });
 
 router.post('/save' , helper.authenticateToken , async (req , res) => {
