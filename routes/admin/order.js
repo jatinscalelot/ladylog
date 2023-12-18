@@ -20,7 +20,6 @@ router.get('/count' , helper.authenticateToken , async (req , res) => {
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
-            let totalOrders = await primary.model(constants.MODELS.orders, orderModel).count();
             let pendingOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'pending'});
             let readyToShipOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'ready_to_ship'});
             let shippedOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'shipped'});
@@ -28,13 +27,13 @@ router.get('/count' , helper.authenticateToken , async (req , res) => {
             let rtoOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'rto'});
             let cancelledOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'cancelled'});
             let obj = {
-                totalOrders: totalOrders,
-                pendingOrders: pendingOrders,
-                readyToShipOrders: readyToShipOrders,
-                shippedOrders: shippedOrders,
-                deliveredOrders: deliveredOrders,
-                rtoOrders: rtoOrders,
-                cancelledOrders: cancelledOrders,
+                totalOrders: parseInt(pendingOrders + readyToShipOrders),
+                pendingOrders: parseInt(pendingOrders),
+                readyToShipOrders: parseInt(readyToShipOrders),
+                shippedOrders: parseInt(shippedOrders),
+                deliveredOrders: parseInt(deliveredOrders),
+                rtoOrders: parseInt(rtoOrders),
+                cancelledOrders: parseInt(cancelledOrders),
             };
             return responseManager.onSuccess('count...!' , obj , res);
         }else{
