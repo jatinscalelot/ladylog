@@ -7,6 +7,7 @@ const responseManager = require('../../utilities/response.manager');
 const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
+const userModel = require('../../models/users/users.model');
 const addressModel = require('../../models/users/address.model');
 const productModel = require('../../models/admin/products.model');
 const veriantModel = require('../../models/admin/veriants.model');
@@ -44,29 +45,45 @@ router.get('/count' , helper.authenticateToken , async (req , res) => {
     }
 });
 
-// router.post('/getone' , helper.authenticateToken , async (req , res) => {
-//     const {orderId} = req.body;
-//     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-//         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-//         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
-//         if(adminData && adminData != null){
-//             if(orderId && orderId.trim() != ''){
-//                 let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
-//                 if(orderData && orderData != null){
-//                     return responseManager.onSuccess('Order details...!' , orderData , res);
-//                 }else{
-//                     return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
-//                 }
-//             }else{
-//                 return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
-//             }
-//         }else{            
-//             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-//         }
-//     }else{
-//         return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-//     }
-// });
+router.post('/getone' , helper.authenticateToken , async (req , res) => {
+    const {orderId} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            if(orderId && orderId.trim() != ''){
+                let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).populate([
+                    {path: 'veriants.veriant' , model: primary.model(constants.MODELS.veriants , veriantModel) , select: '-createdBy -updatedBy -createdAt -updatedAt -__v'},
+                    {path: 'addressId' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-createdBy -updatedBy -createdAt -updatedAt -__v'},
+                    {path: 'createdBy' , model: primary.model(constants.MODELS.users , userModel) , select: '_id name mobile'},
+                ]).select('-status -__v').lean();
+                if(orderData && orderData != null){
+                    async.forEachSeries(orderData.veriants , (veriant , next_veriant) => {
+                        ( async () => {
+                            let productData = await primary.model(constants.MODELS.products , productModel).findById(veriant.veriant.product).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+                            veriant.veriant.product = productData;
+                            let sizeData = await primary.model(constants.MODELS.sizemasters , sizeMasterModel).findById(veriant.veriant.size).select('_id size_name').lean();
+                            veriant.veriant.size = sizeData;
+                            next_veriant();
+                        })().catch((error) => {
+                            return responseManager.onError(error , res);
+                        });
+                    },() => {
+                        return responseManager.onSuccess('Order details...!' , orderData , res);
+                    });
+                }else{
+                    return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+                }
+            }else{
+                return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+            }
+        }else{            
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
 
 
 router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
