@@ -21,13 +21,21 @@ router.get('/count' , helper.authenticateToken , async (req , res) => {
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
             let totalOrders = await primary.model(constants.MODELS.orders, orderModel).count();
-            let pendingOrders = await primary.model(constants.MODELS.orders, orderModel).count({is_pending: true , is_conform: false , is_cancelled: false , is_read_to_ship: false , is_shipped: false , is_delivered: false , is_rto: false});
-            let conformedOrders = await primary.model(constants.MODELS.orders, orderModel).count({is_pending: false , is_conform: true , is_cancelled: false , is_read_to_ship: false , is_shipped: false , is_delivered: false , is_rto: false});
+            let pendingOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'pending'});
+            let readyToShipOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'ready_to_ship'});
+            let shippedOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'shipped'});
+            let deliveredOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'delivered'});
+            let rtoOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'rto'});
+            let cancelledOrders = await primary.model(constants.MODELS.orders, orderModel).count({fullfill_status: 'cancelled'});
             let obj = {
                 totalOrders: totalOrders,
                 pendingOrders: pendingOrders,
-                conformedOrders: conformedOrders,
-            }
+                readyToShipOrders: readyToShipOrders,
+                shippedOrders: shippedOrders,
+                deliveredOrders: deliveredOrders,
+                rtoOrders: rtoOrders,
+                cancelledOrders: cancelledOrders,
+            };
             return responseManager.onSuccess('count...!' , obj , res);
         }else{
             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
@@ -37,29 +45,29 @@ router.get('/count' , helper.authenticateToken , async (req , res) => {
     }
 });
 
-router.post('/getone' , helper.authenticateToken , async (req , res) => {
-    const {orderId} = req.body;
-    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
-        if(adminData && adminData != null){
-            if(orderId && orderId.trim() != ''){
-                let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
-                if(orderData && orderData != null){
-                    return responseManager.onSuccess('Order details...!' , orderData , res);
-                }else{
-                    return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
-                }
-            }else{
-                return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
-            }
-        }else{            
-            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-        }
-    }else{
-        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-    }
-});
+// router.post('/getone' , helper.authenticateToken , async (req , res) => {
+//     const {orderId} = req.body;
+//     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+//         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+//         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+//         if(adminData && adminData != null){
+//             if(orderId && orderId.trim() != ''){
+//                 let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
+//                 if(orderData && orderData != null){
+//                     return responseManager.onSuccess('Order details...!' , orderData , res);
+//                 }else{
+//                     return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+//                 }
+//             }else{
+//                 return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+//             }
+//         }else{            
+//             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+//         }
+//     }else{
+//         return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+//     }
+// });
 
 
 router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
@@ -133,38 +141,118 @@ router.post('/acceptOrders' , helper.authenticateToken , async (req , res) => {
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
             if(orderIds && Array.isArray(orderIds) && orderIds.length > 0){
+                let orderIdsToUpdate = [];
                 async.forEachSeries(orderIds, (orderId , next_orderId) => {
                     ( async () => {
                         if(orderId && orderId.trim() != ''){
                             let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
                             if(orderData && orderData != null){
-                                if(orderData.is_pending === true){
-                                    let obj = {
-                                        is_pending: false,
-                                        is_conform: true,
-                                        updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                                        updatedAt: new Date()
-                                    };
-                                    let updatedOrderData = await primary.model(constants.MODELS.orders, orderModel).findByIdAndUpdate(orderData._id , obj , {returnOriginal: false}).lean();
+                                if(orderData.fullfill_status === 'pending'){
+                                    orderIdsToUpdate.push(orderData.orderId);
                                     next_orderId();
                                 }else{
-                                    return responseManager.badrequest({message: 'Order already conformed...!'}, res);
+                                    if(orderData.fullfill_status === 'ready_to_ship'){
+                                        return responseManager.badrequest({message: 'Order already accepted...!'}, res);
+                                    }else if(orderData.fullfill_status === 'shipped'){
+                                        return responseManager.badrequest({message: 'Order is shipped...!'}, res);
+                                    }else if(orderData.fullfill_status === 'delivered'){
+                                        return responseManager.badrequest({message: 'Order is delivered...!'}, res);
+                                    }else if(orderData.fullfill_status === 'rto'){
+                                        return responseManager.badrequest({message: 'Order is rto...!'}, res);
+                                    }else{
+                                        return responseManager.badrequest({message: 'Order is cancelled...!'}, res);
+                                    }
                                 }
                             }else{                                
-                                return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+                                return responseManager.badrequest({message: 'Invalid orderid to get order details, Please try again...!'}, res);
                             }
                         }else{
-                            return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+                            return responseManager.badrequest({message: 'Invalid orderid to get order details, Please try again...!'}, res);
                         }
                     })().catch((error) => {
                         return responseManager.onError(error , res);
                     });
                 }, () => {
-                    return responseManager.onSuccess('Order Accepted successfully...!' , 1 , res);
+                    ( async () => {
+                        let obj = {
+                            fullfill_status: 'ready_to_ship',
+                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                            updatedAt: new Date()
+                        };
+                        let updatedOrdersData = await primary.model(constants.MODELS.orders, orderModel).updateMany({orderId: {$in: orderIdsToUpdate}} , obj , {returnOriginal: false}).lean();
+                        console.log('updatedOrdersData :',updatedOrdersData);
+                        return responseManager.onSuccess('All Order Accepted successfully...!' , 1 , res);
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
                 });
             }else{
                 return responseManager.badrequest({message: 'Invalid orderid to get order detials...!'}, res);
             }
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
+
+router.post('/readyToShipOrders' , helper.authenticateToken , async (req , res) => {
+    const {page , limit} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            primary.model(constants.MODELS.orders, orderModel).paginate({
+                fullfill_status: 'ready_to_ship',
+            }, {
+                page,
+                limit: parseInt(limit),
+                select: '-createdBy -updatedBy -createdAt -updatedAt -__v',
+                sort: {createdAt: -1},
+                populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+                lean: true
+            }).then((readyToShipOrders) => {
+                async.forEachSeries(readyToShipOrders.docs, (readyToShipOrder , next_readyToShipOrder) => {
+                    ( async () => {
+                        let totalObject = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+                            {$match: {_id: readyToShipOrder._id}},
+                            {$unwind: '$veriants'},
+                            {$group: {
+                                _id: null,
+                                totalPrice: {$sum: '$veriants.price'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
+                                totalQuantity: {$sum: '$veriants.quantity'},
+                                totalSGST: {$sum: '$veriants.sgst'},
+                                totalCGST: {$sum: '$veriants.cgst'},
+                            }}
+                        ]);
+                        if(totalObject && totalObject.length > 0){
+                            readyToShipOrder.totalPrice = parseFloat(parseFloat(totalObject[0].totalPrice).toFixed(2));
+                            readyToShipOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            readyToShipOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            readyToShipOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
+                            readyToShipOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                            readyToShipOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                        }else{
+                            readyToShipOrder.totalPrice = 0;
+                            readyToShipOrder.totalQuantity = 0;
+                            readyToShipOrder.totalTax = 0;
+                            readyToShipOrder.totalDiscount = 0;
+                            readyToShipOrder.totalDiscountendPrice = 0;
+                            readyToShipOrder.totalPay = 0;
+                        }
+                        next_readyToShipOrder();
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('Pending orders...!' , readyToShipOrders , res);
+                });
+            }).catch((error) => {
+                return responseManager.onError(error , res);
+            });
         }else{
             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
         }
@@ -179,51 +267,58 @@ router.post('/cancelOrders' ,  helper.authenticateToken , async (req , res) => {
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
-            async.forEachSeries(orderIds, (orderId , next_orderId) => {
-                ( async () => {
-                    if(orderId && orderId.trim() != ''){
-                        let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
-                        if(orderData && orderData != null){
-                            if(orderData.is_pending === true){
-                                if(orderData.is_cancelled === false){
-                                    let obj = {
-                                        is_pending: false,
-                                        is_cancelled: true,
-                                        updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                                        updatedAt: new Date()
-                                    };
-                                    let updatedOrderData = await primary.model(constants.MODELS.orders, orderModel).findByIdAndUpdate(orderData._id , obj , {returnOriginal: false});
+            if(orderIds && Array.isArray(orderIds) && orderIds.length > 0){
+                async.forEachSeries(orderIds, (orderId , next_orderId) => {
+                    ( async () => {
+                        if(orderId && orderId.trim() != ''){
+                            let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
+                            if(orderData && orderData != null){
+                                if(orderData.fullfill_status === 'pending'){
+                                    if(orderData.financial_status === 'accept'){
+                                        let obj = {
+                                            fullfill_status: 'cancelled',
+                                            financial_status: 'refund',
+                                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                            updatedAt: new Date()
+                                        };
+                                        let cancelledOrderData = await primary.model(constants.MODELS.orders, orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                    }else{
+                                        let obj = {
+                                            fullfill_status: 'cancelled',
+                                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                            updatedAt: new Date()
+                                        };
+                                        let cancelledOrderData = await primary.model(constants.MODELS.orders, orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                    }
                                     next_orderId();
                                 }else{
-                                    return responseManager.badrequest({message: 'Order already cancelled...!'}, res);
+                                    if(orderData.fullfill_status === 'ready_to_ship'){
+                                        return responseManager.badrequest({message: 'Order in ready to ship, You can not cancelled order now...!'}, res);
+                                    }else if(orderData.fullfill_status === 'shipped'){
+                                        return responseManager.badrequest({message: 'Order is shipped...!'}, res);
+                                    }else if(orderData.fullfill_status === 'delivered'){
+                                        return responseManager.badrequest({message: 'Order is delivered...!'}, res);
+                                    }else if(orderData.fullfill_status === 'rto'){
+                                        return responseManager.badrequest({message: 'Order in rto...!'}, res);
+                                    }else{
+                                        return responseManager.badrequest({message: 'Order is already cancelled...!'}, res);
+                                    }
                                 }
-                            }else{
-                                if(orderData.is_conform === true){
-                                    return responseManager.badrequest({message: 'Order is conformed, You can not cancel order now...!'}, res);
-                                }else{
-                                    let obj = {
-                                        is_pending: false,
-                                        is_conform: false,
-                                        is_cancelled: true,
-                                        updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                                        updatedAt: new Date()
-                                    };
-                                    let updatedOrderData = await primary.model(constants.MODELS.orders, orderModel).findByIdAndUpdate(orderData._id , obj , {returnOriginal: false});
-                                    next_orderId();
-                                }
+                            }else{                                
+                                return responseManager.badrequest({message: 'Invalid orderid to get order details, Please try again...!'}, res);
                             }
-                        }else{                            
-                            return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
+                        }else{
+                            return responseManager.badrequest({message: 'Invalid orderid to get order details, Please try again...!'}, res);
                         }
-                    }else{
-                        return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
-                    }
-                })().catch((error) => {
-                    return responseManager.onError(error , res);
-                })
-            }, () => {
-                return responseManager.onSuccess('Orders cancelled successfully...!' , 1 , res);
-            });
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('All Order calcelled successfully...!' , 1 , res);
+                });
+            }else{
+                return responseManager.badrequest({message: 'Invalid orderid to get order detials...!'}, res);
+            }
         }else{
             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
         }
@@ -232,24 +327,59 @@ router.post('/cancelOrders' ,  helper.authenticateToken , async (req , res) => {
     }
 });
 
-router.post('/conformedOrders' , helper.authenticateToken , async (req , res) => {
+router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) => {
     const {page , limit} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
             primary.model(constants.MODELS.orders, orderModel).paginate({
-                is_pending: false,
-                is_conform: true
-            }, {
+                fullfill_status: 'cancelled'
+            },{
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -createdAt -updatedAt -__v',
+                select: '-createdBy -updatedBy -createdAt -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
-            }).then((conformedOrders) => {
-                return responseManager.onSuccess('Conformed orders...!', conformedOrders , res);
+            }).then((cancelledOrders) => {
+                async.forEachSeries(cancelledOrders.docs, (cancelledOrder , next_cancelledOrder) => {
+                    ( async () => {
+                        let totalObject = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+                            {$match: {_id: cancelledOrder._id}},
+                            {$unwind: '$veriants'},
+                            {$group: {
+                                _id: null,
+                                totalPrice: {$sum: '$veriants.price'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
+                                totalQuantity: {$sum: '$veriants.quantity'},
+                                totalSGST: {$sum: '$veriants.sgst'},
+                                totalCGST: {$sum: '$veriants.cgst'},
+                            }}
+                        ]);
+                        if(totalObject && totalObject.length > 0){
+                            cancelledOrder.totalPrice = parseFloat(parseFloat(totalObject[0].totalPrice).toFixed(2));
+                            cancelledOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            cancelledOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            cancelledOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
+                            cancelledOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                            cancelledOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                        }else{
+                            cancelledOrder.totalPrice = 0;
+                            cancelledOrder.totalQuantity = 0;
+                            cancelledOrder.totalTax = 0;
+                            cancelledOrder.totalDiscount = 0;
+                            cancelledOrder.totalDiscountendPrice = 0;
+                            cancelledOrder.totalPay = 0;
+                        }
+                        next_cancelledOrder();
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('Cancelled orders...!' , cancelledOrders , res);
+                });
             }).catch((error) => {
                 return responseManager.onError(error , res);
             });
@@ -260,6 +390,7 @@ router.post('/conformedOrders' , helper.authenticateToken , async (req , res) =>
         return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
     }
 });
+
 
 // router.post('/downloadInvoice' , helper.authenticateToken , async (req , res) => {
 //     const {orderIds} = req.body;
