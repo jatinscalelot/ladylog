@@ -72,6 +72,10 @@ let schema = new mongoose.Schema({
         type: String,
         enum: ['accept' , 'pending' , 'refund']
     },
+    payment_type: {
+        type: String,
+        default: 'G-pay'
+    },
     is_download: {
         type: Boolean,
         default: false

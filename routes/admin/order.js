@@ -93,25 +93,28 @@ router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
                             {$unwind: '$veriants'},
                             {$group: {
                                 _id: null,
-                                totalPrice: {$sum: '$veriants.price'},
-                                totalDiscount: {$sum: '$veriants.discount'},
-                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
                                 totalQuantity: {$sum: '$veriants.quantity'},
+                                totalNetPrice: {$sum: '$veriants.total_price'},
                                 totalSGST: {$sum: '$veriants.sgst'},
                                 totalCGST: {$sum: '$veriants.cgst'},
+                                totalGrossAmount: {$sum: '$veriants.gross_amount'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
                             }}
                         ]);
                         if(totalObject && totalObject.length > 0){
-                            pendingOrder.totalPrice = parseFloat(parseFloat(totalObject[0].totalPrice).toFixed(2));
                             pendingOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            pendingOrder.totalNetPrice = parseFloat(parseFloat(totalObject[0].totalNetPrice).toFixed(2));
                             pendingOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            pendingOrder.totalGrossAmount = parseFloat(parseFloat(totalObject[0].totalGrossAmount).toFixed(2));
                             pendingOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
                             pendingOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
                             pendingOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
                         }else{
-                            pendingOrder.totalPrice = 0;
                             pendingOrder.totalQuantity = 0;
+                            pendingOrder.totalNetPrice = 0;
                             pendingOrder.totalTax = 0;
+                            pendingOrder.totalGrossAmount = 0;
                             pendingOrder.totalDiscount = 0;
                             pendingOrder.totalDiscountendPrice = 0;
                             pendingOrder.totalPay = 0;
@@ -220,25 +223,28 @@ router.post('/readyToShipOrders' , helper.authenticateToken , async (req , res) 
                             {$unwind: '$veriants'},
                             {$group: {
                                 _id: null,
-                                totalPrice: {$sum: '$veriants.price'},
-                                totalDiscount: {$sum: '$veriants.discount'},
-                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
                                 totalQuantity: {$sum: '$veriants.quantity'},
+                                totalNetPrice: {$sum: '$veriants.total_price'},
                                 totalSGST: {$sum: '$veriants.sgst'},
                                 totalCGST: {$sum: '$veriants.cgst'},
+                                totalGrossAmount: {$sum: '$veriants.gross_amount'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
                             }}
                         ]);
                         if(totalObject && totalObject.length > 0){
-                            readyToShipOrder.totalPrice = parseFloat(parseFloat(totalObject[0].totalPrice).toFixed(2));
                             readyToShipOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            readyToShipOrder.totalNetPrice = parseFloat(parseFloat(totalObject[0].totalNetPrice).toFixed(2));
                             readyToShipOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            readyToShipOrder.totalGrossAmount = parseFloat(parseFloat(totalObject[0].totalGrossAmount).toFixed(2));
                             readyToShipOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
                             readyToShipOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
                             readyToShipOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
                         }else{
-                            readyToShipOrder.totalPrice = 0;
                             readyToShipOrder.totalQuantity = 0;
+                            readyToShipOrder.totalNetPrice = 0;
                             readyToShipOrder.totalTax = 0;
+                            readyToShipOrder.totalGrossAmount = 0;
                             readyToShipOrder.totalDiscount = 0;
                             readyToShipOrder.totalDiscountendPrice = 0;
                             readyToShipOrder.totalPay = 0;
@@ -350,25 +356,28 @@ router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) =>
                             {$unwind: '$veriants'},
                             {$group: {
                                 _id: null,
-                                totalPrice: {$sum: '$veriants.price'},
-                                totalDiscount: {$sum: '$veriants.discount'},
-                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
                                 totalQuantity: {$sum: '$veriants.quantity'},
+                                totalNetPrice: {$sum: '$veriants.total_price'},
                                 totalSGST: {$sum: '$veriants.sgst'},
                                 totalCGST: {$sum: '$veriants.cgst'},
+                                totalGrossAmount: {$sum: '$veriants.gross_amount'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
                             }}
                         ]);
                         if(totalObject && totalObject.length > 0){
-                            cancelledOrder.totalPrice = parseFloat(parseFloat(totalObject[0].totalPrice).toFixed(2));
                             cancelledOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            cancelledOrder.totalNetPrice = parseFloat(parseFloat(totalObject[0].totalNetPrice).toFixed(2));
                             cancelledOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            cancelledOrder.totalGrossAmount = parseFloat(parseFloat(totalObject[0].totalGrossAmount).toFixed(2));
                             cancelledOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
                             cancelledOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
                             cancelledOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
                         }else{
-                            cancelledOrder.totalPrice = 0;
                             cancelledOrder.totalQuantity = 0;
+                            cancelledOrder.totalNetPrice = 0;
                             cancelledOrder.totalTax = 0;
+                            cancelledOrder.totalGrossAmount = 0;
                             cancelledOrder.totalDiscount = 0;
                             cancelledOrder.totalDiscountendPrice = 0;
                             cancelledOrder.totalPay = 0;
@@ -378,7 +387,7 @@ router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) =>
                         return responseManager.onError(error , res);
                     });
                 }, () => {
-                    return responseManager.onSuccess('Cancelled orders...!' , cancelledOrders , res);
+                    return responseManager.onSuccess('Pending orders...!' , cancelledOrders , res);
                 });
             }).catch((error) => {
                 return responseManager.onError(error , res);
