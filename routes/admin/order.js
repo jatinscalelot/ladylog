@@ -71,12 +71,18 @@ router.get('/count' , helper.authenticateToken , async (req , res) => {
 
 
 router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
-    const {page , limit} = req.body;
+    const {page , limit , search} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
             primary.model(constants.MODELS.orders, orderModel).paginate({
+                $or: [
+                    {orderId: {$regex: search, $options: 'i'}},
+                    {fullfill_status: {$regex: search, $options: 'i'}},
+                    {financial_status: {$regex: search, $options: 'i'}},
+                    {payment_type: {$regex: search, $options: 'i'}}
+                ],
                 fullfill_status: 'pending'
             },{
                 page,
@@ -201,12 +207,18 @@ router.post('/acceptOrders' , helper.authenticateToken , async (req , res) => {
 });
 
 router.post('/readyToShipOrders' , helper.authenticateToken , async (req , res) => {
-    const {page , limit} = req.body;
+    const {page , limit , search} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
             primary.model(constants.MODELS.orders, orderModel).paginate({
+                $or: [
+                    {orderId: {$regex: search, $options: 'i'}},
+                    {fullfill_status: {$regex: search, $options: 'i'}},
+                    {financial_status: {$regex: search, $options: 'i'}},
+                    {payment_type: {$regex: search, $options: 'i'}}
+                ],
                 fullfill_status: 'ready_to_ship',
             }, {
                 page,
@@ -334,12 +346,18 @@ router.post('/cancelOrders' ,  helper.authenticateToken , async (req , res) => {
 });
 
 router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) => {
-    const {page , limit} = req.body;
+    const {page , limit , search} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
             primary.model(constants.MODELS.orders, orderModel).paginate({
+                $or: [
+                    {orderId: {$regex: search, $options: 'i'}},
+                    {fullfill_status: {$regex: search, $options: 'i'}},
+                    {financial_status: {$regex: search, $options: 'i'}},
+                    {payment_type: {$regex: search, $options: 'i'}}
+                ],
                 fullfill_status: 'cancelled'
             },{
                 page,
