@@ -10,6 +10,7 @@ const userModel = require('../../models/users/users.model');
 const addressModel = require('../../models/users/address.model');
 const productModel = require('../../models/admin/products.model');
 const veriantModel = require('../../models/admin/veriants.model');
+const reviewModel = require('../../models/users/review.model');
 const orderModel = require('../../models/users/order.model');
 const sizeMasterModel = require('../../models/admin/size.master');
 const async = require('async');
@@ -39,6 +40,17 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                         ( async () => {
                             let productData = await primary.model(constants.MODELS.products, productModel).findById(veriant.veriant.product).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
                             let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(veriant.veriant.size).select('_id size_name').lean();
+                            let noofreview = parseInt(await primary.model(constants.MODELS.reviews, reviewModel).countDocuments({product: productData._id}));
+                            if(noofreview > 0){
+                                let totalReviewsCountObj = await primary.model(constants.MODELS.reviews, reviewModel).aggregate([{$match: {product: productData._id}} , {$group: {_id: null , sum: {$sum: '$rating'}}}]);
+                                if(totalReviewsCountObj && totalReviewsCountObj.length > 0 && totalReviewsCountObj[0].sum){
+                                    productData.ratings = parseFloat((totalReviewsCountObj[0].sum / noofreview).toFixed(1));
+                                }else{
+                                    productData.ratings = 0.0
+                                }
+                            }else{
+                                productData.ratings = 0.0;
+                            }
                             veriant.veriant.product = productData;                            
                             veriant.veriant.size = sizeData;                            
                             next_veriant();
@@ -54,6 +66,56 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             }).catch((error) => {
                 return responseManager.onError(error , res);
             });
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+    }
+});
+
+router.post('/getone' , helper.authenticateToken , async (req , res) => {
+    const {orderId} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let userData = await primary.model(constants.MODELS.users , userModel).findById(req.token._id).lean();
+        if(userData && userData != null && userData.status === true){
+            if(orderId && orderId.trim() != ''){
+                let orderData = await primary.model(constants.MODELS.orders , orderModel).findOne({orderId: orderId}).populate([
+                    {path: 'veriants.veriant' , model: primary.model(constants.MODELS.veriants , veriantModel) , select: '-createdBy -updatedBy -createdAt -updatedAt -__v'},
+                    {path: 'addressId' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+                ]).select('-is_download -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+                if(orderData && orderData != null){
+                    async.forEachSeries(orderData.veriants, (veriant , next_veriant) => {
+                        ( async () => {
+                            let productData = await primary.model(constants.MODELS.products , productModel).findById(veriant.veriant.product).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+                            let noofreview = parseInt(await primary.model(constants.MODELS.reviews, reviewModel).countDocuments({product: productData._id}));
+                            if(noofreview > 0){
+                                let totalReviewsCountObj = await primary.model(constants.MODELS.reviews, reviewModel).aggregate([{$match: {product: productData._id}} , {$group: {_id: null , sum: {$sum: '$rating'}}}]);
+                                if(totalReviewsCountObj && totalReviewsCountObj.length > 0 && totalReviewsCountObj[0].sum){
+                                    productData.ratings = parseFloat((totalReviewsCountObj[0].sum / noofreview).toFixed(1));
+                                }else{
+                                    productData.ratings = 0.0
+                                }
+                            }else{
+                                productData.ratings = 0.0;
+                            }
+                            veriant.veriant.product = productData;
+                            let sizeData = await primary.model(constants.MODELS.sizemasters , sizeMasterModel).findById(veriant.veriant.size).select('_id size_name').lean();
+                            veriant.veriant.size = sizeData;
+                            next_veriant();
+                        })().catch((error) => {
+                            return responseManager.onError(error , res);
+                        });
+                    }, () => {
+                        return responseManager.onSuccess('Order details...!' , orderData , res);
+                    });
+                }else{
+                    return responseManager.badrequest({message: 'Invalid order id to get order details...!'}, res);
+                }
+            }else{
+                return responseManager.badrequest({message: 'Invalid order id to get order details...!'}, res);
+            }
         }else{
             return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
         }

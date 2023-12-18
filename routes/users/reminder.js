@@ -36,14 +36,23 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     if(userReminderData && userReminderData != null){
                         if(userReminderData.reminder_on === true){
                             reminder.is_on = true;
-                            reminder.time = userReminderData.reminder_time;
+                            reminder.repeat = userReminderData.repeat;
+                            reminder.reminder_time = userReminderData.reminder_time;
+                            reminder.reminder_start = userReminderData.reminder_start;
+                            reminder.reminder_end = userReminderData.reminder_end;
                         }else{
                             reminder.is_on = false;
-                            reminder.time = '';
+                            reminder.repeat = '';
+                            reminder.reminder_time = '';
+                            reminder.reminder_start = 0;
+                            reminder.reminder_end = 0;
                         }
                     }else{
                         reminder.is_on = false;
-                        reminder.time = '';
+                        reminder.repeat = '';
+                        reminder.reminder_time = '';
+                        reminder.reminder_start = 0;
+                        reminder.reminder_end = 0;
                     }
                     next_reminder();
                 })().catch((error) => {
