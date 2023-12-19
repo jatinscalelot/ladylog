@@ -85,7 +85,6 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
     }
 });
 
-
 router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
     const {page , limit , search} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
@@ -434,6 +433,224 @@ router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) =>
     }
 });
 
+router.post('/shippedOrders' , helper.authenticateToken , async (req , res) => {
+    const {page , limit , search} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            primary.model(constants.MODELS.orders, orderModel).paginate({
+                $or: [
+                    {orderId: {$regex: search, $options: 'i'}},
+                    {fullfill_status: {$regex: search, $options: 'i'}},
+                    {financial_status: {$regex: search, $options: 'i'}},
+                    {payment_type: {$regex: search, $options: 'i'}}
+                ],
+                fullfill_status: 'shipped',
+            }, {
+                page,
+                limit: parseInt(limit),
+                select: '-createdBy -updatedBy -__v',
+                sort: {createdAt: -1},
+                populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+                lean: true
+            }).then((shippedOrders) => {
+                async.forEachSeries(shippedOrders.docs, (shippedOrder , next_shippedOrder) => {
+                    ( async () => {
+                        let totalObject = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+                            {$match: {_id: shippedOrder._id}},
+                            {$unwind: '$veriants'},
+                            {$group: {
+                                _id: null,
+                                totalQuantity: {$sum: '$veriants.quantity'},
+                                totalNetPrice: {$sum: '$veriants.total_price'},
+                                totalSGST: {$sum: '$veriants.sgst'},
+                                totalCGST: {$sum: '$veriants.cgst'},
+                                totalGrossAmount: {$sum: '$veriants.gross_amount'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
+                            }}
+                        ]);
+                        if(totalObject && totalObject.length > 0){
+                            shippedOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            shippedOrder.totalNetPrice = parseFloat(parseFloat(totalObject[0].totalNetPrice).toFixed(2));
+                            shippedOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            shippedOrder.totalGrossAmount = parseFloat(parseFloat(totalObject[0].totalGrossAmount).toFixed(2));
+                            shippedOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
+                            shippedOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                            shippedOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                        }else{
+                            shippedOrder.totalQuantity = 0;
+                            shippedOrder.totalNetPrice = 0;
+                            shippedOrder.totalTax = 0;
+                            shippedOrder.totalGrossAmount = 0;
+                            shippedOrder.totalDiscount = 0;
+                            shippedOrder.totalDiscountendPrice = 0;
+                            shippedOrder.totalPay = 0;
+                        }
+                        next_shippedOrder();
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('Shipped orders...!' , shippedOrders , res);
+                });
+            }).catch((error) => {
+                return responseManager.onError(error , res);
+            });
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
+
+router.post('/deliveredOrders' , helper.authenticateToken , async (req , res) => {
+    const {page , limit , search} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            primary.model(constants.MODELS.orders, orderModel).paginate({
+                $or: [
+                    {orderId: {$regex: search, $options: 'i'}},
+                    {fullfill_status: {$regex: search, $options: 'i'}},
+                    {financial_status: {$regex: search, $options: 'i'}},
+                    {payment_type: {$regex: search, $options: 'i'}}
+                ],
+                fullfill_status: 'delivered',
+            }, {
+                page,
+                limit: parseInt(limit),
+                select: '-createdBy -updatedBy -__v',
+                sort: {createdAt: -1},
+                populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+                lean: true
+            }).then((deliveredOrders) => {
+                async.forEachSeries(deliveredOrders.docs, (deliveredOrder , next_deliveredOrder) => {
+                    ( async () => {
+                        let totalObject = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+                            {$match: {_id: deliveredOrder._id}},
+                            {$unwind: '$veriants'},
+                            {$group: {
+                                _id: null,
+                                totalQuantity: {$sum: '$veriants.quantity'},
+                                totalNetPrice: {$sum: '$veriants.total_price'},
+                                totalSGST: {$sum: '$veriants.sgst'},
+                                totalCGST: {$sum: '$veriants.cgst'},
+                                totalGrossAmount: {$sum: '$veriants.gross_amount'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
+                            }}
+                        ]);
+                        if(totalObject && totalObject.length > 0){
+                            deliveredOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            deliveredOrder.totalNetPrice = parseFloat(parseFloat(totalObject[0].totalNetPrice).toFixed(2));
+                            deliveredOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            deliveredOrder.totalGrossAmount = parseFloat(parseFloat(totalObject[0].totalGrossAmount).toFixed(2));
+                            deliveredOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
+                            deliveredOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                            deliveredOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                        }else{
+                            deliveredOrder.totalQuantity = 0;
+                            deliveredOrder.totalNetPrice = 0;
+                            deliveredOrder.totalTax = 0;
+                            deliveredOrder.totalGrossAmount = 0;
+                            deliveredOrder.totalDiscount = 0;
+                            deliveredOrder.totalDiscountendPrice = 0;
+                            deliveredOrder.totalPay = 0;
+                        }
+                        next_deliveredOrder();
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('Delivered orders...!' , deliveredOrders , res);
+                });
+            }).catch((error) => {
+                return responseManager.onError(error , res);
+            });
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
+
+router.post('/rtoOrders' , helper.authenticateToken , async (req , res) => {
+    const {page , limit , search} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            primary.model(constants.MODELS.orders, orderModel).paginate({
+                $or: [
+                    {orderId: {$regex: search, $options: 'i'}},
+                    {fullfill_status: {$regex: search, $options: 'i'}},
+                    {financial_status: {$regex: search, $options: 'i'}},
+                    {payment_type: {$regex: search, $options: 'i'}}
+                ],
+                fullfill_status: 'rto',
+            }, {
+                page,
+                limit: parseInt(limit),
+                select: '-createdBy -updatedBy -__v',
+                sort: {createdAt: -1},
+                populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+                lean: true
+            }).then((rtoOrders) => {
+                async.forEachSeries(rtoOrders.docs, (rtoOrder , next_rtoOrder) => {
+                    ( async () => {
+                        let totalObject = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+                            {$match: {_id: rtoOrder._id}},
+                            {$unwind: '$veriants'},
+                            {$group: {
+                                _id: null,
+                                totalQuantity: {$sum: '$veriants.quantity'},
+                                totalNetPrice: {$sum: '$veriants.total_price'},
+                                totalSGST: {$sum: '$veriants.sgst'},
+                                totalCGST: {$sum: '$veriants.cgst'},
+                                totalGrossAmount: {$sum: '$veriants.gross_amount'},
+                                totalDiscount: {$sum: '$veriants.discount'},
+                                totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
+                            }}
+                        ]);
+                        if(totalObject && totalObject.length > 0){
+                            rtoOrder.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                            rtoOrder.totalNetPrice = parseFloat(parseFloat(totalObject[0].totalNetPrice).toFixed(2));
+                            rtoOrder.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                            rtoOrder.totalGrossAmount = parseFloat(parseFloat(totalObject[0].totalGrossAmount).toFixed(2));
+                            rtoOrder.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
+                            rtoOrder.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                            rtoOrder.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                        }else{
+                            rtoOrder.totalQuantity = 0;
+                            rtoOrder.totalNetPrice = 0;
+                            rtoOrder.totalTax = 0;
+                            rtoOrder.totalGrossAmount = 0;
+                            rtoOrder.totalDiscount = 0;
+                            rtoOrder.totalDiscountendPrice = 0;
+                            rtoOrder.totalPay = 0;
+                        }
+                        next_rtoOrder();
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('RTO orders...!' , rtoOrders , res);
+                });
+            }).catch((error) => {
+                return responseManager.onError(error , res);
+            });
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
 
 // router.post('/downloadInvoice' , helper.authenticateToken , async (req , res) => {
 //     const {orderIds} = req.body;
@@ -441,47 +658,51 @@ router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) =>
 //         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
 //         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
 //         if(adminData && adminData != null){
-//             async.forEachSeries(orderIds, (orderId , next_orderId) => {
-//                 ( async () => {
-//                     if(orderId && orderId.trim() != ''){
-//                         let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
-//                         if(orderData && orderData != null){
-//                             if(orderData.is_pending === false){
-//                                 if(orderData.is_conform === true){
-//                                     if(orderData.is_shipped === false){
-//                                         // let data = {
-//                                         //     orderId: orderData.orderId
-//                                         // };
-//                                         // let stringdata = JSON.stringify(data);
-//                                         QRcode.toDataURL(orderData.orderId , (err , code) => {
-//                                             if(code){
-//                                                 console.log('code :',code);
-//                                                 next_orderId();
-//                                             }else{
-//                                                 return responseManager.onError(err , res);
-//                                             }
-//                                         }); 
+//             if(orderIds && Array.isArray(orderIds) && orderIds.length > 0){
+//                 async.forEachSeries(orderIds, (orderId , next_orderId) => {
+//                     ( async () => {
+//                         if(orderId && orderId.trim() != ''){
+//                             let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
+//                             if(orderData && orderData != null){
+//                                 if(orderData.is_pending === false){
+//                                     if(orderData.is_conform === true){
+//                                         if(orderData.is_shipped === false){
+//                                             // let data = {
+//                                             //     orderId: orderData.orderId
+//                                             // };
+//                                             // let stringdata = JSON.stringify(data);
+//                                             QRcode.toDataURL(orderData.orderId , (err , code) => {
+//                                                 if(code){
+//                                                     console.log('code :',code);
+//                                                     next_orderId();
+//                                                 }else{
+//                                                     return responseManager.onError(err , res);
+//                                                 }
+//                                             }); 
+//                                         }else{
+//                                             return responseManager.badrequest({message: 'Order is shipped...!'}, res);
+//                                         }
 //                                     }else{
-//                                         return responseManager.badrequest({message: 'Order is shipped...!'}, res);
+//                                         return responseManager.badrequest({message: 'Please conform order first...!'}, res);
 //                                     }
 //                                 }else{
 //                                     return responseManager.badrequest({message: 'Please conform order first...!'}, res);
 //                                 }
 //                             }else{
-//                                 return responseManager.badrequest({message: 'Please conform order first...!'}, res);
+//                                 return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
 //                             }
 //                         }else{
 //                             return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
 //                         }
-//                     }else{
-//                         return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
-//                     }
-//                 })().catch((error) => {
-//                     return responseManager.onError(error , res);
-//                 });
-//             }, () => {
-//                 return responseManager.onSuccess('Label generated successfully...!' , 1 , res);
-//             })
+//                     })().catch((error) => {
+//                         return responseManager.onError(error , res);
+//                     });
+//                 }, () => {
+//                     return responseManager.onSuccess('Label generated successfully...!' , 1 , res);
+//                 })
+//             }else{
+//                 return responseManager.badrequest({message: 'Invalid order id to get order details...!'}, res);
+//             }
 //         }else{
 //             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
 //         }
