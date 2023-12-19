@@ -58,6 +58,37 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                     {path: 'createdBy' , model: primary.model(constants.MODELS.users , userModel) , select: '_id name mobile'},
                 ]).select('-status -__v').lean();
                 if(orderData && orderData != null){
+                    let totalObject = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+                        {$match: {_id: orderData._id}},
+                        {$unwind: '$veriants'},
+                        {$group: {
+                            _id: null,
+                            totalQuantity: {$sum: '$veriants.quantity'},
+                            totalNetPrice: {$sum: '$veriants.total_price'},
+                            totalSGST: {$sum: '$veriants.sgst'},
+                            totalCGST: {$sum: '$veriants.cgst'},
+                            totalGrossAmount: {$sum: '$veriants.gross_amount'},
+                            totalDiscount: {$sum: '$veriants.discount'},
+                            totalDiscountendPrice: {$sum: '$veriants.discounted_amount'},
+                        }}
+                    ]);
+                    if(totalObject && totalObject.length > 0){
+                        orderData.totalQuantity = parseInt(totalObject[0].totalQuantity);
+                        orderData.totalNetPrice = parseFloat(parseFloat(totalObject[0].totalNetPrice).toFixed(2));
+                        orderData.totalTax = parseFloat(parseFloat(totalObject[0].totalSGST + totalObject[0].totalCGST).toFixed(2));
+                        orderData.totalGrossAmount = parseFloat(parseFloat(totalObject[0].totalGrossAmount).toFixed(2));
+                        orderData.totalDiscount = parseFloat(parseFloat(totalObject[0].totalDiscount).toFixed(2));
+                        orderData.totalDiscountendPrice = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                        orderData.totalPay = parseFloat(parseFloat(totalObject[0].totalDiscountendPrice).toFixed(2));
+                    }else{
+                        orderData.totalQuantity = 0;
+                        orderData.totalNetPrice = 0;
+                        orderData.totalTax = 0;
+                        orderData.totalGrossAmount = 0;
+                        orderData.totalDiscount = 0;
+                        orderData.totalDiscountendPrice = 0;
+                        orderData.totalPay = 0;
+                    }
                     async.forEachSeries(orderData.veriants , (veriant , next_veriant) => {
                         ( async () => {
                             let productData = await primary.model(constants.MODELS.products , productModel).findById(veriant.veriant.product).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
@@ -664,29 +695,17 @@ router.post('/rtoOrders' , helper.authenticateToken , async (req , res) => {
 //                         if(orderId && orderId.trim() != ''){
 //                             let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
 //                             if(orderData && orderData != null){
-//                                 if(orderData.is_pending === false){
-//                                     if(orderData.is_conform === true){
-//                                         if(orderData.is_shipped === false){
-//                                             // let data = {
-//                                             //     orderId: orderData.orderId
-//                                             // };
-//                                             // let stringdata = JSON.stringify(data);
-//                                             QRcode.toDataURL(orderData.orderId , (err , code) => {
-//                                                 if(code){
-//                                                     console.log('code :',code);
-//                                                     next_orderId();
-//                                                 }else{
-//                                                     return responseManager.onError(err , res);
-//                                                 }
-//                                             }); 
+//                                 if(orderData.fullfill_status === 'ready_to_ship'){
+//                                     QRcode.toDataURL(orderData.orderId , (err , code) => {
+//                                         if(code){
+//                                             console.log('code :',code);
+//                                             next_orderId();
 //                                         }else{
-//                                             return responseManager.badrequest({message: 'Order is shipped...!'}, res);
+//                                             return responseManager.onError(err , res);
 //                                         }
-//                                     }else{
-//                                         return responseManager.badrequest({message: 'Please conform order first...!'}, res);
-//                                     }
+//                                     });
 //                                 }else{
-//                                     return responseManager.badrequest({message: 'Please conform order first...!'}, res);
+//                                     return responseManager.badrequest({message: 'Please first conformed order...!'}, res);
 //                                 }
 //                             }else{
 //                                 return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
