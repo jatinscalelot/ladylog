@@ -47,6 +47,24 @@ exports.authenticateToken = async (req, res, next) => {
         return response.unauthorisedRequest(res);
     }
 };
+exports.staffAuthenticateToken = async (req, res, next) => {
+    const bearerHeader = req.headers['authorization'];
+    if (typeof bearerHeader !== 'undefined') {
+        const bearer = bearerHeader.split(' ');
+        const token = bearer[1];
+        jwt.verify(token, process.env.APP_LOGIN_AUTH_TOKEN, (err, auth) => {
+            if (err) {
+                return response.unauthorisedRequest(res);
+            } else {
+                req.token = auth;
+                req.Token = token;
+            }
+        });
+        next();
+    } else {
+        return response.unauthorisedRequest(res);
+    }
+  };
 exports.firebasetoken = async (req, res, next) => {
     const bearerHeader = req.headers['authorization'];
     if (typeof bearerHeader !== 'undefined') {

@@ -19,7 +19,8 @@ let constants = {
         savedstories: 'savedstories',
         sizemasters: 'sizemasters',
         remindermasters: 'remindermasters',
-        reminders: 'reminders'
+        reminders: 'reminders',
+        staffies: 'staffies'
     }
 };
 module.exports = constants;

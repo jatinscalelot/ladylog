@@ -36,6 +36,7 @@ mongoose.connection.once('open', () => {
 const adminpaths = [
   {pathUrl: '/login', routerFile: 'login'},
   {pathUrl: '/dashboard', routerFile: 'dashboard'},
+  {pathUrl: '/staff', routerFile: 'staff'},
   {pathUrl: '/symptomMaster', routerFile: 'symptomMaster'},
   {pathUrl: '/symptoms', routerFile: 'symptoms'},
   {pathUrl: '/products', routerFile: 'product'},
@@ -70,6 +71,14 @@ const userpaths = [
 userpaths.forEach((path) => {
   app.use('/user' + path.pathUrl, require('./routes/users/' + path.routerFile));
 });
+
+const staffpaths = [
+  { pathUrl: '/login', routerFile: 'login' },
+  { pathUrl: '/profile', routerFile: 'profile' }
+];
+staffpaths.forEach((path) => {
+  app.use('/staff' + path.pathUrl, require('./routes/staff/' + path.routerFile));
+})
 
 app.use(function(err, req, res, next) {
   res.locals.message = err.message;
