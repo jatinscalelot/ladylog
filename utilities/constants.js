@@ -2,6 +2,7 @@ let constants = {
     DEFAULT_DB: 'ladylog',
     MODELS: {
         admins: 'admins',
+        invoicesettings: 'invoicesettings',
         users: 'users',
         addresses: 'addresses',
         symptoms: 'symptoms',
