@@ -25,6 +25,10 @@ let veriant = new mongoose.Schema({
         type: Number,
         require: true
     },
+    gst: {
+        type: Number,
+        require: true
+    },
     gross_amount: {
         type: Number,
         require: true
@@ -56,17 +60,17 @@ let schema = new mongoose.Schema({
         require:  true
     },
     veriants: [veriant],
-    paymentId: {
-        type: String,
-        require:  true
-    },
 	addressId: {
-		type: mongoose.Types.ObjectId,
+        type: mongoose.Types.ObjectId,
 		require: true
 	},
     fullfill_status: {
         type: String,
         enum: ['pending' , 'ready_to_ship' , 'shipped' , 'delivered' , 'rto' , 'cancelled']
+    },
+    paymentId: {
+        type: String,
+        require:  true
     },
     financial_status: {
         type: String,
@@ -75,6 +79,38 @@ let schema = new mongoose.Schema({
     payment_type: {
         type: String,
         default: 'G-pay'
+    },
+    total_quantity: {
+        type: Number,
+        require: true
+    },
+    total_price: {
+        type: Number,
+        require: true
+    },
+    total_sgst: {
+        type: Number,
+        require: true
+    },
+    total_cgst: {
+        type: Number,
+        require: true
+    },
+    total_gst: {
+        type: Number,
+        require: true
+    },
+    total_gross_amount: {
+        type: Number,
+        require: true
+    },
+    total_discount: {
+        type: Number,
+        require: true
+    },
+    total_discounted_amount: {
+        type: Number,
+        require: true
     },
     is_download: {
         type: Boolean,

@@ -358,6 +358,7 @@ router.post('/cancelOrders' ,  helper.authenticateToken , async (req , res) => {
                                         let obj = {
                                             fullfill_status: 'cancelled',
                                             financial_status: 'refund',
+                                            cancelledAt: new Date(),
                                             updatedBy: new mongoose.Types.ObjectId(adminData._id),
                                             updatedAt: new Date()
                                         };
@@ -365,6 +366,7 @@ router.post('/cancelOrders' ,  helper.authenticateToken , async (req , res) => {
                                     }else{
                                         let obj = {
                                             fullfill_status: 'cancelled',
+                                            cancelledAt: new Date(),
                                             updatedBy: new mongoose.Types.ObjectId(adminData._id),
                                             updatedAt: new Date()
                                         };
@@ -715,7 +717,7 @@ router.post('/rtoOrders' , helper.authenticateToken , async (req , res) => {
 //                                 let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).populate([
 //                                     {path: 'veriants.veriant' , model: primary.model(constants.MODELS.veriants , veriantModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
 //                                     {path: 'addressId' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
-//                                     {path: 'createdBy' , model: primary.model(constants.MODELS.users , userModel) , select: '_id name mobile email'}
+//                                     {path: 'createdBy' , model: primary.model(constants.MODELS.users , userModel) , select: '_id name mobile'}
 //                                 ]).select('-is_download -status -updatedBy -updatedAt -__v').lean();
 //                                 if(orderData && orderData != null){
 //                                     if(orderData.fullfill_status === 'ready_to_ship'){
