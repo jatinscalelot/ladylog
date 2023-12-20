@@ -80,6 +80,10 @@ let schema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    shipped_by: {
+        type: mongoose.Types.ObjectId,
+        default: null
+    },
     status: {
         type: Boolean,
         default: true

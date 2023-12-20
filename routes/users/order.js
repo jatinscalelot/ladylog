@@ -225,34 +225,57 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
     }
 });
 
-// router.post('/cancel' , helper.authenticateToken , async (req , res) => {
-//     const {orderId} = req.body;
-//     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-//         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-//         let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
-//         if(userData && userData != null && userData.status === true){
-//             if(orderId && orderId.trim() != '' && mongoose.Types.ObjectId.isValid(orderId)){
-//                 let orderData = await primary.model(constants.MODELS.orders, orderModel).findById(orderId).lean();
-//                 if(orderData && orderData != null && orderData.status === true){
-//                     let obj = {
-//                         status: false,
-//                         updatedBy: new mongoose.Types.ObjectId(userData._id),
-//                         updatedAt: new Date()
-//                     };
-//                     let updatedOrederData = await primary.model(constants.MODELS.orders, orderModel).findByIdAndUpdate(orderData._id , obj , {returnOriginal: false}).lean();
-//                     return responseManager.onSuccess('Order cancel succesfully...!', 1 , res);
-//                 }else{                    
-//                     return responseManager.badrequest({message: 'Invalid id to get order details...!'}, res);
-//                 }
-//             }else{
-//                 return responseManager.badrequest({message: 'Invalid id to get order details...!'}, res);
-//             }
-//         }else{            
-//             return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
-//         }
-//     }else{
-//         return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
-//     }
-// });
+router.post('/cancel' , helper.authenticateToken , async (req , res) => {
+    const {orderId} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+        if(userData && userData != null && userData.status === true){
+            if(orderId && orderId.trim() != ''){
+                let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
+                if(orderData && orderData != null){
+                    if(orderData.fullfill_status === 'pending' || orderData.fullfill_status === 'ready_to_ship'){
+                        if(orderData.financial_status === 'accept'){
+                            let obj = {
+                                fullfill_status: 'cancelled',
+                                financial_status: 'refund',
+                                updatedBy: new mongoose.Types.ObjectId(userData._id),
+                                updatedAt: new Date()
+                            };
+                            let updatedOrederData = await primary.model(constants.MODELS.orders, orderModel).findByIdAndUpdate(orderData._id , obj , {returnOriginal: false}).lean();
+                            return responseManager.onSuccess('Order cancel succesfully...!', 1 , res);
+                        }else{
+                            let obj = {
+                                fullfill_status: 'cancelled',
+                                updatedBy: new mongoose.Types.ObjectId(userData._id),
+                                updatedAt: new Date()
+                            };
+                            let updatedOrederData = await primary.model(constants.MODELS.orders, orderModel).findByIdAndUpdate(orderData._id , obj , {returnOriginal: false}).lean();
+                            return responseManager.onSuccess('Order cancel succesfully...!', 1 , res);
+                        }
+                    }else{
+                        if(orderData.fullfill_status === 'shipped'){
+                            return responseManager.badrequest({message: 'Order is shipped, You can not cancel order now...!'}, res);
+                        }else if(orderData.fullfill_status === 'delivered'){
+                            return responseManager.badrequest({message: 'Order is delivered...!'}, res);
+                        }else if(orderData.fullfill_status === 'rto'){
+                            return responseManager.badrequest({message: 'Order in RTO...!'}, res);
+                        }else{
+                            return responseManager.badrequest({message: 'Order is already cancelled...!'}, res);
+                        }
+                    }
+                }else{                    
+                    return responseManager.badrequest({message: 'Invalid id to get order details...!'}, res);
+                }
+            }else{
+                return responseManager.badrequest({message: 'Invalid id to get order details...!'}, res);
+            }
+        }else{            
+            return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+    }
+});
 
 module.exports = router;

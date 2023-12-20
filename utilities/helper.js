@@ -157,3 +157,7 @@ exports.generateOrderId = (orderNumber) => {
     const orderId = 'LL' + year + date + month + orderNumber.toString();
     return orderId;
 };
+exports.generateINVOId = (orderId) => {
+    let invoiceNo = orderId.slice(0 , 2) + 'INV' + orderId.slice(2);
+    return invoiceNo;
+}
