@@ -6,6 +6,7 @@ const mongoConnection = require('../../utilities/connections');
 const responseManager = require('../../utilities/response.manager');
 const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
+const invoiceSettingsModel = require('../../models/admin/invoice.settings');
 const adminModel = require('../../models/admin/admin.model');
 const userModel = require('../../models/users/users.model');
 const addressModel = require('../../models/users/address.model');
@@ -14,7 +15,22 @@ const veriantModel = require('../../models/admin/veriants.model');
 const orderModel = require('../../models/users/order.model');
 const sizeMasterModel = require('../../models/admin/size.master');
 const async = require('async');
-const QRcode = require('qrcode');
+const QRcode = require('qrcode');   
+
+function currentDate(){
+    const currentDateObject = new Date();
+
+    const day = currentDateObject.getDate();
+    const month = currentDateObject.getMonth() + 1;
+    const year = currentDateObject.getFullYear();
+
+    const formattedDay = (day < 10) ? `0${day}` : day;
+    const formattedMonth = (month < 10) ? `0${month}` : month;
+
+    const currentDate = `${formattedDay}/${formattedMonth}/${year}`;
+
+    return currentDate;
+}
 
 router.get('/count' , helper.authenticateToken , async (req , res) => {
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
@@ -133,7 +149,7 @@ router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
             },{
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -__v',
+                select: '-createdBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -269,7 +285,7 @@ router.post('/readyToShipOrders' , helper.authenticateToken , async (req , res) 
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -__v',
+                select: '-createdBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -408,7 +424,7 @@ router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) =>
             },{
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -__v',
+                select: '-createdBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -481,7 +497,7 @@ router.post('/shippedOrders' , helper.authenticateToken , async (req , res) => {
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -__v',
+                select: '-createdBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -554,7 +570,7 @@ router.post('/deliveredOrders' , helper.authenticateToken , async (req , res) =>
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -__v',
+                select: '-createdBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -627,7 +643,7 @@ router.post('/rtoOrders' , helper.authenticateToken , async (req , res) => {
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -__v',
+                select: '-createdBy -__v',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -690,35 +706,238 @@ router.post('/rtoOrders' , helper.authenticateToken , async (req , res) => {
 //         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
 //         if(adminData && adminData != null){
 //             if(orderIds && Array.isArray(orderIds) && orderIds.length > 0){
-//                 async.forEachSeries(orderIds, (orderId , next_orderId) => {
-//                     ( async () => {
-//                         if(orderId && orderId.trim() != ''){
-//                             let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
-//                             if(orderData && orderData != null){
-//                                 if(orderData.fullfill_status === 'ready_to_ship'){
-//                                     QRcode.toDataURL(orderData.orderId , (err , code) => {
-//                                         if(code){
-//                                             console.log('code :',code);
-//                                             next_orderId();
+//                 let veriants = '';
+//                 let invoiceSettingsData = await primary.model(constants.MODELS.invoicesettings, invoiceSettingsModel).findById(new mongoose.Types.ObjectId('658144a9d5116a3bf6162c25')).lean();
+//                 if(invoiceSettingsData && invoiceSettingsData != null){
+//                     async.forEachSeries(orderIds, (orderId , next_orderId) => {
+//                         ( async () => {
+//                             if(orderId && orderId.trim() != ''){
+//                                 let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).populate([
+//                                     {path: 'veriants.veriant' , model: primary.model(constants.MODELS.veriants , veriantModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+//                                     {path: 'addressId' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+//                                     {path: 'createdBy' , model: primary.model(constants.MODELS.users , userModel) , select: '_id name mobile email'}
+//                                 ]).select('-is_download -status -updatedBy -updatedAt -__v').lean();
+//                                 if(orderData && orderData != null){
+//                                     if(orderData.fullfill_status === 'ready_to_ship'){
+//                                         async.forEachSeries(orderData.veriants, (veriant , next_veriant) => {
+//                                             ( async () => {
+//                                                 let productData = await primary.model(constants.MODELS.products, productModel).findById(veriant.veriant.product).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+//                                                 veriant.veriant.product = productData;
+//                                                 let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(veriant.veriant.size).select('_id size_name').lean();
+//                                                 veriant.veriant.size = sizeData;
+//                                                 veriants += `
+//                                                 <tr>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">${veriant.veriant.product.title}</td>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">${veriant.veriant.SKUID}</td>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">${veriant.veriant.size.size_name}</td>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">${veriant.quantity}</td>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">${veriant.total_price}</td>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">${veriant.discount}</td>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">${veriant.gross_amount}</td>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">
+//                                                     <table class="w-full table-border-0">
+//                                                         <tbody>
+//                                                             <tr><td class="text-[14px] font-medium p-0">GST @18.0%</td></tr>
+//                                                             <tr><td class="text-[14px] font-medium p-0">Rs. ${veriant.sgst + veriant.cgst}</td></tr>
+//                                                         </tbody>
+//                                                     </table>
+//                                                     </td>
+//                                                     <td class="text-[14px] font-medium px-2.5 py-1.5">Rs. ${veriant.discounted_amount}</td>
+//                                                 </tr>
+//                                                 `
+//                                                 next_veriant();
+//                                             })().catch((error) => {
+//                                                 return responseManager.onError(error , res);
+//                                             });
+//                                         }, () => {
+//                                             const invoiceNo = helper.generateINVOId(orderData.orderId);
+//                                             orderData.invoiceNo = invoiceNo;
+//                                             QRcode.toDataURL(orderData.orderId , (err , code) => {
+//                                                 if(code){
+//                                                     orderData.QRcode = code;
+//                                                     const dateObject = new Date(orderData.createdAt);
+//                                                     const orderDate = dateObject.toLocaleDateString("en-GB");
+//                                                     const currentdate = currentDate();
+//                                                     console.log('orderData :',orderData);
+//                                                     let htmlTable = `
+//                                                     <table class="w-[1024px] mx-auto invoice" border="1" cellspacing="10" cellpadding="0">
+//                                                         <tbody>
+//                                                             <tr>
+//                                                                 <td class="p-5">
+//                                                                 <table class="w-full">
+//                                                                     <tbody>
+//                                                                     <tr>
+//                                                                         <td>
+//                                                                         <table class="w-full table-border">
+//                                                                             <tbody>
+//                                                                             <tr>
+//                                                                                 <td width="30%" class="p-2.5">
+//                                                                                 <span class="block text-lg font-semibold pb-1.5">Deliver To.</span>
+//                                                                                 <span class="block w-44 text-sm font-medium">${orderData.createdBy.name} ${orderData.addressId.floor_no} ${orderData.addressId.building_name}, ${orderData.addressId.city}, ${orderData.addressId.state}, ${orderData.addressId.country}-${orderData.addressId.pincode}</span>
+//                                                                                 <span class="block w-44 text-sm font-medium pt-1.5">${orderData.createdBy.mobile}</span>
+//                                                                                 </td>
+//                                                                                 <td width="70%" class="align-baseline p-0" rowspan="2">
+//                                                                                 <table class="w-full table-border table-border-0">
+//                                                                                     <tbody>
+//                                                                                     <tr>
+//                                                                                         <td class="p-0">
+//                                                                                         <img src="imgpsh_fullsize_anim.png" alt="" class="block w-full object-cover">
+//                                                                                         </td>
+//                                                                                     </tr>
+//                                                                                     <tr>
+//                                                                                         <td class="p-4">
+//                                                                                         <table class="w-full table-border table-border-0">
+//                                                                                             <tr>
+//                                                                                             <td class="test-sm font-medium py-1.5"><span class="font-semibold">Order No : </span>${orderData.orderId}</td>
+//                                                                                             <td class="p-0" rowspan="5">
+//                                                                                                 <div class="w-[150px] h-[150px] flex items-center justify-center ml-auto">
+//                                                                                                 <img src="${orderData.QRcode}" class="w-full h-full"></img>
+//                                                                                                 </div>
+//                                                                                             </td>
+//                                                                                             </tr>
+//                                                                                             <tr>
+//                                                                                             <td class="test-sm font-medium py-1.5"><span class="font-semibold">Order Date : </span>${orderDate}</td>
+//                                                                                             </tr>
+//                                                                                             <tr>
+//                                                                                             <td class="test-sm font-medium py-1.5"><span class="font-semibold">Invoice No : </span>${orderData.invoiceNo}</td>
+//                                                                                             </tr>
+//                                                                                             <tr>
+//                                                                                             <td class="test-sm font-medium py-1.5"><span class="font-semibold">Invoice Date : </span>${currentdate}</td>
+//                                                                                             </tr>
+//                                                                                             <tr>
+//                                                                                             <td class="test-sm font-medium py-1.5"><span class="font-semibold">GSTIN : </span>${invoiceSettingsData.gst_no}</td>
+//                                                                                             </tr>
+//                                                                                         </table>
+//                                                                                         </td>
+//                                                                                     </tr>
+//                                                                                     </tbody>
+//                                                                                 </table>
+//                                                                                 </td>
+//                                                                             </tr>
+//                                                                             <tr>
+//                                                                                 <td class="p-2.5">
+//                                                                                 <span class="block text-lg font-semibold pb-1.5">Deliver From.</span>
+//                                                                                 <span class="block w-44 text-sm font-medium">${invoiceSettingsData.company_name} ${invoiceSettingsData.company_address} ${invoiceSettingsData.support_email}</span>
+//                                                                                 <span class="block w-44 text-sm font-medium pt-1.5">${invoiceSettingsData.support_mobile_no}</span>
+//                                                                                 </td>
+//                                                                             </tr>
+//                                                                             </tbody>
+//                                                                         </table>
+//                                                                         </td>
+//                                                                     </tr>
+//                                                                     <tr>
+//                                                                         <td>
+//                                                                         <table class="w-full">
+//                                                                             <tbody>
+//                                                                             <tr>
+//                                                                                 <td width="300px"><span class="block border border-dotted border-black"></span></td>
+//                                                                                 <td width="70px"><span class="block text-center text-[14px] font-semibold tracking-widest">Fold Here</span></td>
+//                                                                                 <td width="300px"><span class="block border border-dotted border-black"></span></td>
+//                                                                             </tr>
+//                                                                             </tbody>
+//                                                                         </table>
+//                                                                         </td>
+//                                                                     </tr>
+//                                                                     <tr>
+//                                                                         <td colspan="6">
+//                                                                         <table class="w-full table-border">
+//                                                                             <thead>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">Product Name</th>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">SKUID</th>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">Size</th>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">Qty</th>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">Total Price</th>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">Discount</th>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">Taxable Amount</th>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">Taxes(CGST,SGST)</th>
+//                                                                             <th class="text-[14px] tracking-wide px-2.5 py-1.5">Payable Amount</th>
+//                                                                             </thead>
+//                                                                             <tbody>
+//                                                                                 ${veriants}
+//                                                                             </tbody>
+//                                                                             <tfoot>
+//                                                                             <tr>
+//                                                                                 <td colspan="7" class="p-0">
+//                                                                                 <table class="w-full table-border table-border-0">
+//                                                                                     <tbody>
+//                                                                                     <tr>
+//                                                                                         <td class="text-lg font-semibold px-2.5 pt-2.5">Payment info&nbsp;:&nbsp;</td>
+//                                                                                         <td rowspan="2" class="text-lg font-semibold px-2.5 py-1.5 text-right">Grand Total : &nbsp;&nbsp;</td>
+//                                                                                     </tr>
+//                                                                                     <tr>
+//                                                                                         <td class="text-[14px] text-black/90 tracking-wider px-2.5 pb-2.5">Credit Card - 236***********928</td>
+//                                                                                     </tr>
+//                                                                                     </tbody>
+//                                                                                 </table>
+//                                                                                 </td>
+//                                                                                 <td colspan="1" class="text-lg font-medium px-2.5 py-1.5">Rs. 288.00</td>
+//                                                                                 <td colspan="1" class="text-lg font-medium px-2.5 py-1.5">Rs. 1688.00</td>
+//                                                                             </tr>
+//                                                                             </tfoot>
+//                                                                         </table>
+//                                                                         </td>
+//                                                                     </tr>
+//                                                                     <tr>
+//                                                                         <td class="py-5">
+//                                                                         <div class="flex item-center">
+//                                                                             <!-- <img src="./assets/images/logo.jpg" alt="" class="w-[150px] ml-auto"> -->
+//                                                                             <img src="imgpsh_fullsize_anim.jpg" alt="" class="w-[150px] ml-auto">
+//                                                                         </div>
+//                                                                         </td>
+//                                                                     </tr>
+//                                                                     <tr>
+//                                                                         <td>
+//                                                                         <div class="w-full border-2 border-black p-4">
+//                                                                             <span class="font-semibold">Terms & Conditions:</span>
+//                                                                             <ul class="list-disc pl-5 pt-2.5">
+//                                                                             <li class="text-sm tracking-widest text-black/90">All claims relating to quantity or shipping errors shall be waived by Buyer unless made in writing to Seller within thirty (30) days after delivery of goods to the address stated.</li>
+//                                                                             <li class="text-sm tracking-widest text-black/90">Delivery dates are not guaranteed and Seller has no liability for damages that may be incurred due to any delay in shipment of goods hereunder. Taxes are excluded unless otherwise stated.</li>
+//                                                                             </ul>
+//                                                                         </div>
+//                                                                         </td>
+//                                                                     </tr>
+//                                                                     </tbody>
+//                                                                 </table>
+//                                                                 </td>
+//                                                             </tr>
+//                                                         </tbody>
+//                                                     </table>
+//                                                     `
+//                                                     console.log('htmlTable :',htmlTable);
+//                                                     next_orderId();
+//                                                 }else{
+//                                                     return responseManager.onError(err , res);
+//                                                 }
+//                                             });
+//                                         });
+//                                     }else{
+//                                         if(orderData.fullfill_status === 'pending'){
+//                                             return responseManager.badrequest({message: 'Please first conformed order...!'}, res);
+//                                         }else if(orderData.fullfill_status === 'shipped'){
+//                                             return responseManager.badrequest({message: 'Order is shipped...!'}, res);
+//                                         }else if(orderData.fullfill_status === 'delivered'){
+//                                             return responseManager.badrequest({message: 'Order is delivered...!'}, res);
+//                                         }else if(orderData.fullfill_status === 'rto'){
+//                                             return responseManager.badrequest({message: 'Order in RTO...!'}, res);
 //                                         }else{
-//                                             return responseManager.onError(err , res);
+//                                             return responseManager.badrequest({message: 'Order is cancelled...!'}, res);
 //                                         }
-//                                     });
+//                                     }
 //                                 }else{
-//                                     return responseManager.badrequest({message: 'Please first conformed order...!'}, res);
+//                                     return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
 //                                 }
 //                             }else{
 //                                 return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
 //                             }
-//                         }else{
-//                             return responseManager.badrequest({message: 'Invalid orderid to get order details...!'}, res);
-//                         }
-//                     })().catch((error) => {
-//                         return responseManager.onError(error , res);
+//                         })().catch((error) => {
+//                             return responseManager.onError(error , res);
+//                         });
+//                     }, () => {
+//                         return responseManager.onSuccess('Label generated successfully...!' , 1 , res);
 //                     });
-//                 }, () => {
-//                     return responseManager.onSuccess('Label generated successfully...!' , 1 , res);
-//                 })
+//                 }else{
+//                     return responseManager.onError('Unable to get invoice settings data, Please try later...!', res);
+//                 }
 //             }else{
 //                 return responseManager.badrequest({message: 'Invalid order id to get order details...!'}, res);
 //             }
