@@ -27,7 +27,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             },{
                 page,
                 limit: parseInt(limit),
-                select: '-createdBy -updatedBy -createdAt -updatedAt -__v',
+                select: '-createdBy -updatedBy -__v',
                 sort: {createdAt: -1},
                 populate: [
                     {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
@@ -82,13 +82,13 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
         if(userData && userData != null && userData.status === true){
             if(orderId && orderId.trim() != ''){
                 let orderData = await primary.model(constants.MODELS.orders , orderModel).findOne({orderId: orderId}).populate([
-                    {path: 'veriants.veriant' , model: primary.model(constants.MODELS.veriants , veriantModel) , select: '-createdBy -updatedBy -createdAt -updatedAt -__v'},
+                    {path: 'veriants.veriant' , model: primary.model(constants.MODELS.veriants , veriantModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                     {path: 'addressId' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
-                ]).select('-is_download -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+                ]).select('-is_download -createdBy -updatedBy -__v').lean();
                 if(orderData && orderData != null){
                     async.forEachSeries(orderData.veriants, (veriant , next_veriant) => {
                         ( async () => {
-                            let productData = await primary.model(constants.MODELS.products , productModel).findById(veriant.veriant.product).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+                            let productData = await primary.model(constants.MODELS.products , productModel).findById(veriant.veriant.product).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
                             let noofreview = parseInt(await primary.model(constants.MODELS.reviews, reviewModel).countDocuments({product: productData._id}));
                             if(noofreview > 0){
                                 let totalReviewsCountObj = await primary.model(constants.MODELS.reviews, reviewModel).aggregate([{$match: {product: productData._id}} , {$group: {_id: null , sum: {$sum: '$rating'}}}]);
