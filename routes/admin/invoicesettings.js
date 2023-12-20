@@ -38,7 +38,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
 });
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
-    const {invoiceSettingsId , company_name , company_email , bank_name , bank_ifsc , bank_account_no , pan_card , gst_no , support_mobile_no , support_email , tc} = req.body;
+    const {invoiceSettingsId , company_name , company_email , company_address , bank_name , bank_ifsc , bank_account_no , pan_card , gst_no , support_mobile_no , support_email , tc} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
@@ -48,53 +48,58 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                 if(invoiceSettingsData && invoiceSettingsData != null){
                     if(company_name && company_name.trim() != ''){
                         if(company_email && company_email.trim() != '' && /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(company_email)){
-                            if(bank_name && bank_name.trim() != ''){
-                                if(bank_ifsc && bank_ifsc.trim() != ''){
-                                    if(bank_account_no && Number.isInteger(bank_account_no)){
-                                        if(pan_card && pan_card.trim() != ''){
-                                            if(gst_no && gst_no.trim() != ''){
-                                                if(support_mobile_no && support_mobile_no.trim() != ''){
-                                                    if(support_email && support_email.trim() != '' && /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(support_email)){
-                                                        if(tc && tc.trim() != '' && tc.length < 8000){
-                                                            let obj = {
-                                                                company_name: company_name.trim(),
-                                                                company_email: company_email,
-                                                                bank_name: bank_name.trim(),
-                                                                bank_ifsc: bank_ifsc.trim(),
-                                                                bank_account_no: bank_account_no,
-                                                                pan_card: pan_card.trim(),
-                                                                gst_no: gst_no.trim(),
-                                                                support_mobile_no: support_mobile_no.trim(),
-                                                                support_email: support_email,
-                                                                tc: tc.trim(),
-                                                                updatedBy: new mongoose.Types.ObjectId(adminData._id),
-                                                                updatedAt: new Date()
-                                                            };
-                                                            let updatedInvoiceSettingsData = await primary.model(constants.MODELS.invoicesettings , invoiceSettingsModel).findByIdAndUpdate(invoiceSettingsData._id , obj , {returnOriginal: false}).lean();
-                                                            return responseManager.onSuccess('Invoice settings data updated successfully...!' , 1 , res);
+                            if(company_address && company_address.trim() != ''){
+                                if(bank_name && bank_name.trim() != ''){
+                                    if(bank_ifsc && bank_ifsc.trim() != ''){
+                                        if(bank_account_no && Number.isInteger(bank_account_no)){
+                                            if(pan_card && pan_card.trim() != ''){
+                                                if(gst_no && gst_no.trim() != ''){
+                                                    if(support_mobile_no && support_mobile_no.trim() != ''){
+                                                        if(support_email && support_email.trim() != '' && /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(support_email)){
+                                                            if(tc && tc.trim() != '' && tc.length < 8000){
+                                                                let obj = {
+                                                                    company_name: company_name.trim(),
+                                                                    company_email: company_email,
+                                                                    company_address: company_address.trim(),
+                                                                    bank_name: bank_name.trim(),
+                                                                    bank_ifsc: bank_ifsc.trim(),
+                                                                    bank_account_no: bank_account_no,
+                                                                    pan_card: pan_card.trim(),
+                                                                    gst_no: gst_no.trim(),
+                                                                    support_mobile_no: support_mobile_no.trim(),
+                                                                    support_email: support_email,
+                                                                    tc: tc.trim(),
+                                                                    updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                                                    updatedAt: new Date()
+                                                                };
+                                                                let updatedInvoiceSettingsData = await primary.model(constants.MODELS.invoicesettings , invoiceSettingsModel).findByIdAndUpdate(invoiceSettingsData._id , obj , {returnOriginal: false}).lean();
+                                                                return responseManager.onSuccess('Invoice settings data updated successfully...!' , 1 , res);
+                                                            }else{
+                                                                return responseManager.badrequest({message: 'Please provide terms & conditions(< 8000)...!'}, res);
+                                                            }
                                                         }else{
-                                                            return responseManager.badrequest({message: 'Please provide terms & conditions(< 8000)...!'}, res);
+                                                            return responseManager.badrequest({message: 'Please enter valid support email...!'}, res);
                                                         }
                                                     }else{
-                                                        return responseManager.badrequest({message: 'Please enter valid support email...!'}, res);
+                                                        return responseManager.badrequest({message: 'Please enter valid support mobile number...!'}, res);
                                                     }
                                                 }else{
-                                                    return responseManager.badrequest({message: 'Please enter valid support mobile number...!'}, res);
+                                                    return responseManager.badrequest({message: 'Please enter valid company GSTIN number...!'}, res);
                                                 }
                                             }else{
-                                                return responseManager.badrequest({message: 'Please enter valid company GSTIN number...!'}, res);
+                                                return responseManager.badrequest({message: 'Please enter valid pancard number...!'}, res);
                                             }
                                         }else{
-                                            return responseManager.badrequest({message: 'Please enter valid pancard number...!'}, res);
+                                            return responseManager.badrequest({message: 'Please enter a valid bank account number...!'}, res);
                                         }
                                     }else{
-                                        return responseManager.badrequest({message: 'Please enter a valid bank account number...!'}, res);
+                                        return responseManager.badrequest({message: 'Please enter a bank IFSC code...!'}, res);
                                     }
                                 }else{
-                                    return responseManager.badrequest({message: 'Please enter a bank IFSC code...!'}, res);
+                                    return responseManager.badrequest({message: 'Please enter a bank name...!'}, res);
                                 }
                             }else{
-                                return responseManager.badrequest({message: 'Please enter a bank name...!'}, res);
+                                return responseManager.badrequest({message: 'Please enter company address...!'}, res);
                             }
                         }else{
                             return responseManager.badrequest({message: 'Please enter a company email...!'}, res);

@@ -9,6 +9,10 @@ let schema = new mongoose.Schema({
         type: String,
         require: true
     },
+    company_address: {
+        type: String,
+        require: true
+    },
     bank_name: {
         type: String,
         require: true
