@@ -43,6 +43,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                 let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(1).lean();
                 let data = {
                     period_days: updateUser.period_days,
+                    cycle_length: userData.cycle,
                     lastCycle: {
                         period_start_date: lastCycle[0].period_start_date,
                         period_end_date: lastCycle[0].period_end_date
@@ -57,6 +58,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                 let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(1).lean();
                 let data = {
                     period_days: userData.period_days,
+                    cycle_length: userData.cycle,
                     lastCycle: {
                         period_start_date: lastCycle[0].period_start_date,
                         period_end_date: lastCycle[0].period_end_date
