@@ -35,7 +35,7 @@ async function checkProductDetails(productDetails){
           if(sizeData && sizeData != null && sizeData.status === true){
             if((productDetail.stock || productDetail.stock === 0) && !isNaN(productDetail.stock) && productDetail.stock >= 0){
               if(productDetail.price && !isNaN(productDetail.price) && productDetail.price > 0){
-                if((!isNaN(productDetail.discount_per) && productDetail.discount_per >= 0) || (!isNaN(productDetail.discount_amount) && productDetail.discount_amount >= 0)){
+                if((!isNaN(productDetail.discount_per) && productDetail.discount_per >= 0 && productDetail.discount_per <= 100) || (!isNaN(productDetail.discount_amount) && productDetail.discount_amount >= 0 && productDetail.discount_amount <= productDetail.price)){
                   if(productDetail.status === true || productDetail.status === false){
                     valid = true;
                     next_productDetail();

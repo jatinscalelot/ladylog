@@ -380,7 +380,7 @@ router.post('/shippedOrders' , helper.authenticateToken , async (req , res) => {
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount shipped_by shippedAt createdAt updatedAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((shippedOrders) => {
@@ -388,6 +388,74 @@ router.post('/shippedOrders' , helper.authenticateToken , async (req , res) => {
             }).catch((error) => {
                 return responseManager.onError(error , res);
             });
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
+
+router.post('/deliverOrders' , helper.authenticateToken , async (req , res) => {
+    const {orderIds} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            if(orderIds && Array.isArray(orderIds) && orderIds.length > 0){
+                async.forEachSeries(orderIds, (orderId , next_orderId) => {
+                    ( async () => {
+                        if(orderId && orderId.trim() != ''){
+                            let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
+                            if(orderData && orderData != null){
+                                if(orderData.fullfill_status === 'shipped'){
+                                    if(orderData.financial_status === 'pending'){
+                                        let obj = {
+                                            fullfill_status: 'delivered',
+                                            financial_status: 'accept',
+                                            deliveredAt: new Date(),
+                                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                            updatedAt: new Date()
+                                        };
+                                        let deliveredOrderData = await primary.model(constants.MODELS.orders, orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                    }else{
+                                        let obj = {
+                                            fullfill_status: 'delivered',
+                                            deliveredAt: new Date(),
+                                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                            updatedAt: new Date()
+                                        };
+                                        let deliveredOrderData = await primary.model(constants.MODELS.orders, orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                    }
+                                    next_orderId();
+                                }else{
+                                    if(orderData.fullfill_status === 'pending'){
+                                        return responseManager.badrequest({message: 'Order in pending, Please conform order first...!'}, res);
+                                    }else if(orderData.fullfill_status === 'ready_to_ship'){
+                                        return responseManager.badrequest({message: 'Order in ready to ship...!'}, res);
+                                    }else if(orderData.fullfill_status === 'delivered'){
+                                        return responseManager.badrequest({message: 'Order is already delivered...!'}, res);
+                                    }else if(orderData.fullfill_status === 'rto'){
+                                        return responseManager.badrequest({message: 'Order in rto...!'}, res);
+                                    }else{
+                                        return responseManager.badrequest({message: 'Order is cancelled...!'}, res);
+                                    }
+                                }
+                            }else{                                
+                                return responseManager.badrequest({message: 'Invalid orderid to get order details, Please try again...!'}, res);
+                            }
+                        }else{
+                            return responseManager.badrequest({message: 'Invalid orderid to get order details, Please try again...!'}, res);
+                        }
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('All Order delivered successfully...!' , 1 , res);
+                });
+            }else{
+                return responseManager.badrequest({message: 'Invalid orderid to get order detials...!'}, res);
+            }
         }else{
             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
         }
@@ -413,9 +481,8 @@ router.post('/deliveredOrders' , helper.authenticateToken , async (req , res) =>
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount deliveredAt createdAt updatedAt updatedBy',
                 sort: {createdAt: -1},
-                populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
             }).then((deliveredOrders) => {
                 return responseManager.onSuccess('Delivered orders...!' , deliveredOrders , res);
@@ -431,6 +498,75 @@ router.post('/deliveredOrders' , helper.authenticateToken , async (req , res) =>
 });
 
 router.post('/rtoOrders' , helper.authenticateToken , async (req , res) => {
+    const {orderIds} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            if(orderIds && Array.isArray(orderIds) && orderIds.length > 0){
+                async.forEachSeries(orderIds, (orderId , next_orderId) => {
+                    ( async () => {
+                        if(orderId && orderId.trim() != ''){
+                            let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
+                            if(orderData && orderData != null){
+                                if(orderData.fullfill_status === 'shipped'){
+                                    if(orderData.financial_status === 'accept'){
+                                        let obj = {
+                                            fullfill_status: 'rto',
+                                            financial_status: 'refund',
+                                            refunded_amount: parseFloat(orderData.total_discounted_amount),
+                                            rtoAt: new Date(),
+                                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                            updatedAt: new Date()
+                                        };
+                                        let rtoOrderData = await primary.model(constants.MODELS.orders, orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                    }else{
+                                        let obj = {
+                                            fullfill_status: 'rto',
+                                            rtoAt: new Date(),
+                                            updatedBy: new mongoose.Types.ObjectId(adminData._id),
+                                            updatedAt: new Date()
+                                        };
+                                        let rtoOrderData = await primary.model(constants.MODELS.orders, orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                    }
+                                    next_orderId();
+                                }else{
+                                    if(orderData.fullfill_status === 'pending'){
+                                        return responseManager.badrequest({message: 'Order in pending, Please conform order first...!'}, res);
+                                    }else if(orderData.fullfill_status === 'ready_to_ship'){
+                                        return responseManager.badrequest({message: 'Order in ready to ship...!'}, res);
+                                    }else if(orderData.fullfill_status === 'delivered'){
+                                        return responseManager.badrequest({message: 'Order is delivered...!'}, res);
+                                    }else if(orderData.fullfill_status === 'rto'){
+                                        return responseManager.badrequest({message: 'Order is already in rto...!'}, res);
+                                    }else{
+                                        return responseManager.badrequest({message: 'Order is cancelled...!'}, res);
+                                    }
+                                }
+                            }else{                                
+                                return responseManager.badrequest({message: 'Invalid orderid to get order details, Please try again...!'}, res);
+                            }
+                        }else{
+                            return responseManager.badrequest({message: 'Invalid orderid to get order details, Please try again...!'}, res);
+                        }
+                    })().catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }, () => {
+                    return responseManager.onSuccess('All Order moved to rto successfully...!' , 1 , res);
+                });
+            }else{
+                return responseManager.badrequest({message: 'Invalid orderid to get order detials...!'}, res);
+            }
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
+
+router.post('/getRTOOrders' , helper.authenticateToken , async (req , res) => {
     const {page , limit , search} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
@@ -447,7 +583,7 @@ router.post('/rtoOrders' , helper.authenticateToken , async (req , res) => {
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount refunded_amount rtoAt createdAt updatedAt updatedBy',
                 sort: {createdAt: -1},
                 lean: true
             }).then((rtoOrders) => {
