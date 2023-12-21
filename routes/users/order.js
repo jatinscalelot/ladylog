@@ -186,7 +186,7 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                         total_cgst: parseFloat(total_cgst),
                                         total_gst: parseFloat(total_gst),
                                         total_gross_amount: parseFloat(total_gross_amount),
-                                        total_discount: parseFloat(total_discount),
+                                        total_discount: parseFloat(parseFloat(total_discount).toFixed(2)),
                                         total_discounted_amount: parseFloat(total_discounted_amount),
                                         createdBy: new mongoose.Types.ObjectId(userData._id)
                                     };
