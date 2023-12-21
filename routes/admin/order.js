@@ -149,7 +149,7 @@ router.post('/pendingOrders' , helper.authenticateToken , async (req , res) => {
             },{
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount createdAt updatedAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((pendingOrders) => {
@@ -245,7 +245,7 @@ router.post('/readyToShipOrders' , helper.authenticateToken , async (req , res) 
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount ready_to_shipped_date createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount ready_to_shipped_date createdAt updatedAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((readyToShipOrders) => {
@@ -347,7 +347,7 @@ router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) =>
             },{
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount refunded_amount cancelledAt updatedBy  createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount refunded_amount cancelledAt updatedBy  createdAt updatedAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((cancelledOrders) => {
@@ -380,7 +380,7 @@ router.post('/shippedOrders' , helper.authenticateToken , async (req , res) => {
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((shippedOrders) => {
@@ -413,7 +413,7 @@ router.post('/deliveredOrders' , helper.authenticateToken , async (req , res) =>
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
                 sort: {createdAt: -1},
                 populate: {path: 'addressId' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                 lean: true
@@ -447,7 +447,7 @@ router.post('/rtoOrders' , helper.authenticateToken , async (req , res) => {
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount  createdAt updatedAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((rtoOrders) => {
