@@ -427,7 +427,6 @@ router.post('/upload' , helper.authenticateToken , upload.single('productImages'
           let sizeOfImageInMB = helper.bytesToMB(req.file.size);
           if(sizeOfImageInMB <= 5){
             aws.saveToS3WithName(req.file.buffer , 'Products' , req.file.mimetype , 'Images').then((result) => {
-              console.log('result :', result);
               let data = {
                 path: result.data.Key,
               };
