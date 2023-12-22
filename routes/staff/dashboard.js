@@ -15,10 +15,23 @@ router.get('/' , helper.staffAuthenticateToken , async (req , res) => {
         let staffMemberData = await primary.model(constants.MODELS.staffies , staffModel).findById(req.token._id).lean();
         if(staffMemberData && staffMemberData != null && staffMemberData.status === true){
             if(req.Token === staffMemberData.token){
-                const todayDate = new Date();
-                let todayorders = parseInt(await primary.model(constants.MODELS.orders , orderModel).countDocuments({createdAt: {$gt: todayDate}}));
+                const dateObject = new Date();
+                const date = dateObject.getDate();
+                const month = dateObject.getMonth() + 1;
+                const year = dateObject.getFullYear();
+                const startdate = new Date(year + '-' + month + '-' + date + ' 00:00:00');
+                const starttimestamp = parseInt(startdate.getTime());
+                const endDate = new Date(year + '-' + month + '-' + date + ' 23:59:59');
+                const endtimestamp = parseInt(endDate.getTime() - 19800000);
+                let todayorders = parseInt(await primary.model(constants.MODELS.orders , orderModel).countDocuments({ orderAt_timestamp: { $gte: starttimestamp , $lte: endtimestamp} }));
+                let pendingOrders = parseInt(await primary.model(constants.MODELS.orders , orderModel).countDocuments({fullfill_status: 'pending'}));
+                let readyToShipOrders = parseInt(await primary.model(constants.MODELS.orders , orderModel).countDocuments({fullfill_status: 'ready_to_ship'}));
+                let shippedOrders = parseInt(await primary.model(constants.MODELS.orders , orderModel).countDocuments({fullfill_status: 'shipped'}));
                 let data = {
-                    todayorders: parseInt(todayorders)
+                    todayorders: parseInt(todayorders),
+                    pendingorders: parseInt(pendingOrders),
+                    readytoshiporders: parseInt(readyToShipOrders),
+                    shippedorders: parseInt(shippedOrders)
                 };
                 return responseManager.onSuccess('Orders details...!' , data , res);
             }else{
