@@ -20,7 +20,7 @@ const QRcode = require('qrcode');
 const puppeteer = require('puppeteer');
 const PDFMerger = require('pdf-merger-js');
 const fs = require('fs');
-const { default: axios } = require('axios');
+const axios = require('axios');
 
 function currentDate(){
     const currentDateObject = new Date();
@@ -635,7 +635,6 @@ router.post('/downloadInvoice' , helper.authenticateToken , async (req , res) =>
                                     if(orderData.fullfill_status === 'ready_to_ship'){
                                         if(orderData.invoiceNo && orderData.invoiceNo.trim() != '' && orderData.invoice_path && orderData.invoice_path.trim() != ''){
                                             const url = process.env.AWS_BUCKET_URI + orderData.invoice_path;
-                                            console.log('url :',url);
                                             const response = await axios.get(url,  { responseType: 'arraybuffer' });
                                             const buffer = Buffer.from(response.data, "utf-8");
                                             await merger.add('invoice.pdf');
@@ -915,7 +914,6 @@ router.post('/downloadInvoice' , helper.authenticateToken , async (req , res) =>
                         ( async () => {
                             const mergedPdfBuffer = await merger.saveAsBuffer();
                             aws.saveToS3WithName(mergedPdfBuffer , 'MergeInvoice' , 'application/pdf' , 'pdf').then((result) => {
-                                console.log('result :',result);
                                 let data = {
                                     path: result.data.Key,
                                 };
