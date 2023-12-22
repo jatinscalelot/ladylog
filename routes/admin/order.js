@@ -637,7 +637,7 @@ router.post('/downloadInvoice' , helper.authenticateToken , async (req , res) =>
                                             const url = process.env.AWS_BUCKET_URI + orderData.invoice_path;
                                             const response = await axios.get(url,  { responseType: 'arraybuffer' });
                                             const buffer = Buffer.from(response.data, "utf-8");
-                                            await merger.add('invoice.pdf');
+                                            await merger.add(buffer);
                                             next_orderId();
                                         }else{
                                             async.forEachSeries(orderData.veriants, (veriant , next_veriant) => {
