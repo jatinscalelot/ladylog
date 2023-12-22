@@ -116,6 +116,14 @@ let schema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    orderAt: {
+        type: Date,
+        require: true
+    },
+    orderAt_timestamp: {
+        type: Number,
+        require: true
+    },
     shipped_by: {
         type: mongoose.Types.ObjectId,
         default: null
