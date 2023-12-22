@@ -24,7 +24,9 @@ router.post('/' , async (req , res) => {
                 };
                 let updatedStaffMemberData = await primary.model(constants.MODELS.staffies , staffModel).findByIdAndUpdate(staffMemberData._id , obj , {returnOriginal: false}).lean();
                 let data = {
-                    accessToken: updatedStaffMemberData.token
+                    accessToken: updatedStaffMemberData.token,
+                    name: staffMemberData.name,
+                    mobile: staffMemberData.mobile
                 };
                 return responseManager.onSuccess('Login successfully...!' , data , res);
             }else{
