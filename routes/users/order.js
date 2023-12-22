@@ -188,6 +188,8 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                         total_gross_amount: parseFloat(total_gross_amount),
                                         total_discount: parseFloat(parseFloat(total_discount).toFixed(2)),
                                         total_discounted_amount: parseFloat(total_discounted_amount),
+                                        orderAt: new Date(),
+                                        orderAt_timestamp: Date.now(),
                                         createdBy: new mongoose.Types.ObjectId(userData._id)
                                     };
                                     let newOrder = await primary.model(constants.MODELS.orders, orderModel).create(orderObj);
