@@ -74,7 +74,8 @@ userpaths.forEach((path) => {
 
 const staffpaths = [
   { pathUrl: '/login', routerFile: 'login' },
-  { pathUrl: '/profile', routerFile: 'profile' }
+  { pathUrl: '/dashboard', routerFile: 'dashboard' },
+  { pathUrl: '/shipped', routerFile: 'shipped' },
 ];
 staffpaths.forEach((path) => {
   app.use('/staff' + path.pathUrl, require('./routes/staff/' + path.routerFile));
