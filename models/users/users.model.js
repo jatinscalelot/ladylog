@@ -5,6 +5,10 @@ let schema = new mongoose.Schema({
 		type: String,
 		default: ''
 	},
+	email: {
+		type: String,
+		default: ''
+	},
 	profile_pic: {
 		type: String,
 		default: ''
@@ -14,8 +18,8 @@ let schema = new mongoose.Schema({
 		default: false
 	},
 	pID: {
-    type: mongoose.Types.ObjectId,
-    default: null
+		type: mongoose.Types.ObjectId,
+		default: null
 	},
 	paymentID: {
 		type: String,

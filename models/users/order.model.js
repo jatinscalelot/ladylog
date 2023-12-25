@@ -124,6 +124,14 @@ let schema = new mongoose.Schema({
         type: Number,
         require: true
     },
+    deliverAt: {
+        type: Date,
+        require: true
+    },
+    deliver_timestamp: {
+        type: Number,
+        require: true
+    },
     shipped_by: {
         type: mongoose.Types.ObjectId,
         default: null

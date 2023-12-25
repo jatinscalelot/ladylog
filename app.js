@@ -55,7 +55,6 @@ const userpaths = [
   { pathUrl: '/login', routerFile: 'login' },
   { pathUrl: '/account', routerFile: 'account' },
   { pathUrl: '/address', routerFile: 'address' },
-  { pathUrl: '/upload', routerFile: 'profilePic' },
   { pathUrl: '/profile', routerFile: 'profile' },
   { pathUrl: '/mycycle', routerFile: 'mycycle' },
   { pathUrl: '/userSymptoms', routerFile: 'userSymptoms' },

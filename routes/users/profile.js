@@ -1,20 +1,34 @@
 let express = require('express');
 let router = express.Router();
+
+const mongoose = require('mongoose');
 const mongoConnection = require('../../utilities/connections');
 const responseManager = require('../../utilities/response.manager');
 const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const userModel = require('../../models/users/users.model');
 const mycycleModel = require('../../models/users/mycycle.model');
-const mongoose = require('mongoose');
+const upload = require('../../utilities/multer.functions');
+const allowedContentTypes = require('../../utilities/content-types');
+const aws = require('../../utilities/aws');
+
 router.get('/', helper.authenticateToken, async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).select('_id name profile_pic mobile dob goal period_days period_start_date period_end_date').lean();
-        if (userData && userData != null) {
-            return responseManager.onSuccess('User profile', userData, res);
+        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+        if (userData && userData != null && userData.status === true) {
+            let data = {
+                _id: userData._id,
+                name: userData.name,
+                mobile: userData.mobile,
+                email: userData.email,
+                profile_pic: userData.profile_pic,
+                dob: userData.dob,
+                goal: userData.goal
+            };
+            return responseManager.onSuccess('User profile', data, res);
         } else {
             return responseManager.badrequest({ message: 'Invalid token to get user profile, please try again' }, res);
         }
@@ -22,6 +36,7 @@ router.get('/', helper.authenticateToken, async (req, res) => {
         return responseManager.badrequest({ message: 'Invalid token to get user profile, please try again' }, res);
     }
 });
+
 router.post('/', helper.authenticateToken, async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -29,9 +44,9 @@ router.post('/', helper.authenticateToken, async (req, res) => {
         const {name, goal, cycle, period_days, last_period_start_date, last_period_end_date , dob} = req.body;
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
-        const next_period_start_date = await helper.addDaysToTimestamp(last_period_start_date , cycle-1); // This function give me timestamp of next day of after 28 days but i want to get timestamp of after 28 days so i minus 1 day in cycle to get timestamp of after 28 days...
-        const next_period_end_date = await helper.addDaysToTimestamp(next_period_start_date , period_days-1); // same reason...
-        if(userData){
+        const next_period_start_date = helper.addDaysToTimestamp(last_period_start_date , cycle-1); // This function give me timestamp of next day of after 28 days but i want to get timestamp of after 28 days so i minus 1 day in cycle to get timestamp of after 28 days...
+        const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , period_days-1); // same reason...
+        if(userData && userData != null && userData.status === true){
             let obj = {
                 name: name,
                 goal: goal,
@@ -59,5 +74,77 @@ router.post('/', helper.authenticateToken, async (req, res) => {
     } else {
         return responseManager.badrequest({message: 'Invalid token to update user profile, please try again'}, res);
     }
-})
+});
+
+router.post('/update' , helper.authenticateToken , async (req , res) => {
+    const {name , email} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+        if(userData && userData != null && userData.status === true){
+            if(name && name.trim() != ''){
+                if(email && email.trim() != '' && /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)){
+                    let obj = {
+                        name: name.trim(),
+                        email: email.trim(),
+                        updatedBy: new mongoose.Types.ObjectId(userData._id),
+                        updatedAt: new Date()
+                    };
+                    let updatedUserData = await primary.model(constants.MODELS.users , userModel).findByIdAndUpdate(userData._id , obj , {returnOriginal: false}).lean();
+                    return responseManager.onSuccess('Profile data updated successfully...!' , 1 , res);
+                }else{
+                    return responseManager.badrequest({message: 'Invalid email...!'}, res);
+                }
+            }else{
+                return responseManager.badrequest({message: 'Please enter your name...!'}, res);
+            }
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+    }
+});
+
+router.post('/uploadpicture' , helper.authenticateToken , upload.single('profile_pic')  , async (req , res) => {
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+      let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+      let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+      if(userData && userData != null && userData.status === true){
+        if(req.file){
+          if(allowedContentTypes.imagearray.includes(req.file.mimetype)){
+            let sizeOfImageInMB = helper.bytesToMB(req.file.size);
+            if(sizeOfImageInMB <= 5){
+              aws.saveToS3(req.file.buffer , userData._id.toString() , req.file.mimetype , 'profiles').then((result) => {
+                let data = {
+                  profile_pic: result.data.Key,
+                  updatedAt: new Date(),
+                  updatedBy: new mongoose.Types.ObjectId(userData._id)
+                };
+                (async () => {
+                  const updateUser = await primary.model(constants.MODELS.users , userModel).findByIdAndUpdate(userData._id , data , {returnOriginal: false});
+                  return responseManager.onSuccess('User profile updated successfully...!' , 1 , res);
+                })().catch((error) => { 
+                  return responseManager.onError(error , res);
+                });
+              }).catch((error) => {
+                return responseManager.onError(error , res);
+              });
+            }else{
+              return responseManager.badrequest({ message: 'Image file must be <= 5 MB for profile pic, please try again' }, res);
+            }
+          }else{
+            return responseManager.badrequest({ message: 'Invalid file type only image files allowed for profile pic, please try again' }, res);
+          }
+        }else{
+          return responseManager.badrequest({ message: 'Invalid file to update user profile pic, please try again' }, res);
+        }
+      }else{
+        return responseManager.badrequest({message: 'Invalid token to get user, please try again'}, res);
+      }
+    }else{
+      return responseManager.badrequest({message: 'Invalid token to get user, please try again'}, res);
+    }
+  });
+
 module.exports = router;

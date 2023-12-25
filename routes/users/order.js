@@ -15,6 +15,21 @@ const orderModel = require('../../models/users/order.model');
 const sizeMasterModel = require('../../models/admin/size.master');
 const async = require('async');
 
+function addWorkingDays(orderAt_timestamp){
+    let deliverAt = new Date(orderAt_timestamp);
+    let count = 1;
+    while (count < 7){
+        if((deliverAt.getDay() == 0 || deliverAt.getDay() == 6)){
+            deliverAt.setDate(deliverAt.getDate()+1);
+            continue;
+        }
+        deliverAt.setDate(deliverAt.getDate()+1);
+        count++;
+    }
+    let deliver_timestamp = deliverAt.getTime();
+    return {deliverAt , deliver_timestamp};
+}
+
 router.post('/' , helper.authenticateToken , async (req , res) => {
     const {page , limit} = req.body;
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
@@ -26,7 +41,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             },{
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status total_quantity total_discounted_amount createdAt',
+                select: '_id orderId fullfill_status financial_status total_quantity total_discounted_amount orderAt deliverAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((orders) => {
@@ -145,17 +160,17 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                             total_discounted_amount += discounted_amount;
                                             let veriantObj = {
                                                 veriant: new mongoose.Types.ObjectId(veriantData._id),
-                                                price: parseFloat(veriantData.price),
+                                                price: parseFloat(parseFloat(veriantData.price).toFixed(2)),
                                                 quantity: parseInt(veriant.quantity),
                                                 total_price: parseFloat(totalprice.toFixed(2)),
-                                                sgst: parseFloat(sgst),
-                                                cgst: parseFloat(cgst),
-                                                gst: parseFloat(gst),
-                                                gross_amount: parseFloat(gross_amount),
+                                                sgst: parseFloat(parseFloat(sgst).toFixed(2)),
+                                                cgst: parseFloat(parseFloat(cgst).toFixed(2)),
+                                                gst: parseFloat(parseFloat(gst).toFixed(2)),
+                                                gross_amount: parseFloat(parseFloat(gross_amount).toFixed(2)),
                                                 discount_per: parseFloat(veriantData.discount_per),
                                                 discount_amount: parseFloat(veriantData.discount_amount),
-                                                discount: parseFloat(discount),
-                                                discounted_amount: parseFloat(discounted_amount),
+                                                discount: parseFloat(parseFloat(discount).toFixed(2)),
+                                                discounted_amount: parseFloat(parseFloat(discounted_amount).toFixed(2)),
                                                 status: true
                                             };
                                             finalVeriants.push(veriantObj);
@@ -173,6 +188,9 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                 ( async () => {
                                     let noOfOrders = await primary.model(constants.MODELS.orders, orderModel).count();
                                     let orderId = helper.generateOrderId(noOfOrders+1);
+                                    let orderAt = new Date();
+                                    let orderAt_timestamp = orderAt.getTime();
+                                    let {deliverAt , deliver_timestamp} = addWorkingDays(orderAt_timestamp);
                                     let orderObj = {
                                         orderId: orderId,
                                         veriants: finalVeriants,
@@ -181,19 +199,25 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                         fullfill_status: 'pending',
                                         financial_status: 'accept',
                                         total_quantity: parseInt(total_quantity),
-                                        total_price: parseFloat(total_price),
-                                        total_sgst: parseFloat(total_sgst),
-                                        total_cgst: parseFloat(total_cgst),
-                                        total_gst: parseFloat(total_gst),
-                                        total_gross_amount: parseFloat(total_gross_amount),
+                                        total_price: parseFloat(parseFloat(total_price).toFixed(2)),
+                                        total_sgst: parseFloat(parseFloat(total_sgst).toFixed(2)),
+                                        total_cgst: parseFloat(parseFloat(total_cgst).toFixed(2)),
+                                        total_gst: parseFloat(parseFloat(total_gst).toFixed(2)),
+                                        total_gross_amount: parseFloat(parseFloat(total_gross_amount).toFixed(2)),
                                         total_discount: parseFloat(parseFloat(total_discount).toFixed(2)),
-                                        total_discounted_amount: parseFloat(total_discounted_amount),
-                                        orderAt: new Date(),
-                                        orderAt_timestamp: Date.now(),
+                                        total_discounted_amount: parseFloat(parseFloat(total_discounted_amount).toFixed(2)),
+                                        orderAt: orderAt,
+                                        orderAt_timestamp: parseInt(orderAt_timestamp),
+                                        deliverAt: deliverAt,
+                                        deliver_timestamp: parseInt(deliver_timestamp),
                                         createdBy: new mongoose.Types.ObjectId(userData._id)
                                     };
                                     let newOrder = await primary.model(constants.MODELS.orders, orderModel).create(orderObj);
-                                    return responseManager.onSuccess('Order placed successfully...!' , 1 , res);
+                                    let data = {
+                                        orderId: newOrder.orderId,
+                                        deliverAt: newOrder.deliverAt
+                                    };
+                                    return responseManager.onSuccess('Order placed successfully...!' , data , res);
                                 })().catch((error) => {
                                     return responseManager.onError(error , res);
                                 });
