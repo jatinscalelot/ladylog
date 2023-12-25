@@ -251,7 +251,7 @@ router.post('/readyToShipOrders' , helper.authenticateToken , async (req , res) 
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount ready_to_shipped_date createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount ready_to_shipped_date is_download createdAt updatedAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((readyToShipOrders) => {
@@ -355,7 +355,7 @@ router.post('/cancelledOrders' , helper.authenticateToken , async (req , res) =>
             },{
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount refunded_amount cancelledAt updatedBy  createdAt updatedAt',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount refunded_amount cancelledAt refunded_amount updatedBy createdAt updatedAt',
                 sort: {createdAt: -1},
                 lean: true
             }).then((cancelledOrders) => {
@@ -595,7 +595,7 @@ router.post('/getRTOOrders' , helper.authenticateToken , async (req , res) => {
             }, {
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount refunded_amount rtoAt createdAt updatedAt updatedBy',
+                select: '_id orderId fullfill_status paymentId financial_status payment_type total_quantity total_price total_sgst total_cgst total_gst total_gross_amount total_discount total_discounted_amount refunded_amount rtoAt refunded_amount createdAt updatedAt updatedBy',
                 sort: {createdAt: -1},
                 lean: true
             }).then((rtoOrders) => {
@@ -632,6 +632,7 @@ router.post('/downloadInvoice' , helper.authenticateToken , async (req , res) =>
                                     {path: 'createdBy' , model: primary.model(constants.MODELS.users , userModel) , select: '_id name mobile'}
                                 ]).select('-is_download -status -updatedBy -updatedAt -__v').lean();
                                 if(orderData && orderData != null){
+                                    console.log('fullfill status :',orderData.fullfill_status);
                                     if(orderData.fullfill_status === 'ready_to_ship'){
                                         if(orderData.invoiceNo && orderData.invoiceNo.trim() != '' && orderData.invoice_path && orderData.invoice_path.trim() != ''){
                                             const url = process.env.AWS_BUCKET_URI + orderData.invoice_path;
@@ -837,19 +838,20 @@ router.post('/downloadInvoice' , helper.authenticateToken , async (req , res) =>
                                                             `
                                                             // This code for local testing....!
                                                             // const browser = await puppeteer.launch({
-                                                            //     headless: true,
+                                                            //     headless: 'new',
                                                             //     args: ["--no-sandbox"]
                                                             // });
                                                             // end...!
+                                                            // Following code for server start...
                                                             const browser = await puppeteer.launch({
-                                                                headless: true,
+                                                                headless: 'new',
                                                                 executablePath: '/usr/bin/chromium-browser',
                                                                 args: ["--no-sandbox"]
                                                             });
+                                                            // server code end...
                                                             const page = await browser.newPage();
                                                             await page.setContent(html, { waitUntil: 'domcontentloaded' });
                                                             await page.emulateMediaType('screen');
-                                                            const ext = 'pdf';
                                                             const pdf = await page.pdf({
                                                                 path: 'invoice.pdf',
                                                                 printBackground: true,
@@ -863,10 +865,13 @@ router.post('/downloadInvoice' , helper.authenticateToken , async (req , res) =>
                                                                         let obj = {
                                                                             invoiceNo: invoiceNo,
                                                                             invoice_path: result.data.Key,
+                                                                            is_download: true,
                                                                             updatedBy: new mongoose.Types.ObjectId(adminData._id),
                                                                             updatedAt: new Date()
                                                                         };
+                                                                        // console.log('order id :',orderData.orderId);
                                                                         const updatedOrdersData = await primary.model(constants.MODELS.orders , orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                                                        // console.log('updatedOrdersData :', updatedOrdersData);
                                                                         await merger.add('invoice.pdf');
                                                                         veriants = '';
                                                                         next_orderId();
