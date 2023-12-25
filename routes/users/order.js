@@ -197,7 +197,7 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                         paymentId: paymentId.trim(),
                                         addressId: new mongoose.Types.ObjectId(addressData._id),
                                         fullfill_status: 'pending',
-                                        financial_status: 'accept',
+                                        financial_status: 'paid',
                                         total_quantity: parseInt(total_quantity),
                                         total_price: parseFloat(parseFloat(total_price).toFixed(2)),
                                         total_sgst: parseFloat(parseFloat(total_sgst).toFixed(2)),

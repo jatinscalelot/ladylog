@@ -74,7 +74,7 @@ let schema = new mongoose.Schema({
     },
     financial_status: {
         type: String,
-        enum: ['accept' , 'pending' , 'refund']
+        enum: ['paid' , 'cod' , 'refund' , 'partially_paid']
     },
     payment_type: {
         type: String,
