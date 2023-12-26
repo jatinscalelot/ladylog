@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
                 let accessToken = await helper.generateAccessToken({ _id: newUser._id.toString()});
                 return responseManager.onSuccess('User register successfully!', { token: accessToken , is_profile_completed: updateUSer.is_profile_completed }, res);
             }else{
-                if(userData && userData && userData.is_parent === true){
+                if(userData && userData && userData.status === true && userData.is_parent === true){
                     let accessToken = await helper.generateAccessToken({ _id: userData._id.toString() });
                     return responseManager.onSuccess('User login successfully!', { token: accessToken , is_profile_completed: userData.is_profile_completed }, res);
                 }else{

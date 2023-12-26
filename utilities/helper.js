@@ -142,6 +142,12 @@ exports.addDaysToTimestamp = (timestamp , days) => {
     var updatedTimestamp = date.getTime();
     return updatedTimestamp;
 };
+exports.minusDaysToTimestamp = (timestamp , days) => {
+    var date = new Date(timestamp);
+    date.setDate(date.getDate() - days);
+    var updatedTimestamp = date.getTime();
+    return updatedTimestamp;
+};
 exports.bytesToMB = (bytes) => {
     return (bytes / (1024 * 1024)).toFixed(2);
 };  

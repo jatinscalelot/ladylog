@@ -17,22 +17,6 @@ let schema = new mongoose.Schema({
 		type: Boolean,
 		default: false
 	},
-	pID: {
-		type: mongoose.Types.ObjectId,
-		default: null
-	},
-	paymentID: {
-		type: String,
-		default: ''
-	},
-	planType: {
-		type: Number,
-		default: 0
-	},
-	planName: {
-		type: String,
-		default: ''
-	},
 	is_profile_completed: {
 		type: Boolean,
 		default: false
