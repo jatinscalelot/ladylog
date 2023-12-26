@@ -37,6 +37,43 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
   }
 });
 
+router.post('/history' , helper.authenticateToken , async (req , res) => {
+  const {page , limit} = req.body;
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+    if(userData && userData != null && userData.status === true){
+      primary.model(constants.MODELS.usersymptoms, userSymptomsModel).paginate({
+        createdBy: new mongoose.Types.ObjectId(req.token._id)
+      }, {
+        page,
+        limit: parseInt(limit),
+        sort: {createdAt: -1},
+        select: '-status -createdBy -updatedBy -updatedAt -__v',
+        lean: true
+      }).then((userSymptoms) => {
+        async.forEachSeries(userSymptoms.docs, (userSymptom , next_userSymptom) => {
+          ( async () => {
+            let symptoms = await primary.model(constants.MODELS.symptoms, symptomModel).find({_id: {$in: userSymptom.symptoms}}).select('_id symptom_name fill_icon').lean();
+            userSymptom.symptoms = symptoms;
+            next_userSymptom();
+          })().catch((error) => {
+            return responseManager.onError(error , res);
+          });
+        }, () => {
+          return responseManager.onSuccess('User symptoms history...!' , userSymptoms , res);
+        });
+      }).catch((error) => {
+        return responseManager.onError(error , res);
+      });
+    }else{
+      return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+    }
+  }else{
+    return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);
+  }
+});
+
 router.post('/save' , helper.authenticateToken , async (req , res) => {
   const {symptomIds} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
