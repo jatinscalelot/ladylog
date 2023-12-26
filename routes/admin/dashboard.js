@@ -115,7 +115,33 @@ router.get('/userreports' , helper.authenticateToken , async (req , res) => {
           }
         }
       ]);
-      return responseManager.onSuccess('User reports...!' , userReports , res);
+      const subscriberUserReports = await primary.model(constants.MODELS.users , userModel).aggregate([
+        {
+          $match: {
+            is_subscriber: true
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: {$year: '$createdAt'},
+              month: {$month: '$createdAt'}
+            },
+            count: {$sum: 1}
+          }
+        },
+        {
+          $sort: {
+            '_id.year': 1,
+            '_id.month': 1
+          }
+        }
+      ]);
+      let data = {
+        userReports: userReports,
+        subscriberUserReports: subscriberUserReports
+      }
+      return responseManager.onSuccess('User reports...!' , data , res);
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, please try again...!'} , res);
     }
@@ -129,7 +155,14 @@ router.get('/orderreports' , helper.authenticateToken , async (req , res) => {
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let admin = await primary.model(constants.MODELS.admins , adminModel).findById(req.token._id).lean();
     if(admin && admin != null){
-      const orderReports = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+      const totalordersReports = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+        {
+          $match: {
+            fullfill_status: {
+              $in: ['pending' , 'ready_to_ship']
+            }
+          }
+        },
         {
           $group: {
             _id: {
@@ -146,7 +179,56 @@ router.get('/orderreports' , helper.authenticateToken , async (req , res) => {
           }
         }
       ]);
-      return responseManager.onSuccess('Order reports...!' , orderReports , res);
+      const pendingOrderReports = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+        {
+          $match: {
+            fullfill_status: 'pending'
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: {$year: '$orderAt'},
+              month: {$month: '$orderAt'}
+            },
+            count: {$sum: 1}
+          }
+        },
+        {
+          $sort: {
+            '_id.year': 1,
+            '_id.month': 1
+          }
+        }
+      ]);
+      const deliveredOrderReports = await primary.model(constants.MODELS.orders, orderModel).aggregate([
+        {
+          $match: {
+            fullfill_status: 'delivered'
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: {$year: '$orderAt'},
+              month: {$month: '$orderAt'}
+            },
+            count: {$sum: 1}
+          }
+        },
+        {
+          $sort: {
+            '_id.year': 1,
+            '_id.month': 1
+          }
+        }
+      ]);
+      let data = {
+        totalordersReports: totalordersReports,
+        pendingOrderReports: pendingOrderReports,
+        deliveredOrderReports: deliveredOrderReports,
+      }
+      return responseManager.onSuccess('Order reports...!' , data , res);
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, please try again...!'} , res);
     }
