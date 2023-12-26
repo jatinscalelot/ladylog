@@ -24,7 +24,8 @@ router.post('/', async (req, res) => {
                     is_parent: true,
                     parentId: null,
                     exp: decodedToken.exp,
-                    status: true
+                    status: true,
+                    createdAt_timestamp: Date.now()
                 };
                 let newUser = await primary.model(constants.MODELS.users, userModel).create(obj);
                 let updateUSer = await primary.model(constants.MODELS.users , userModel).findByIdAndUpdate(newUser._id , {channelID: newUser._id.toString() + '_' + newUser.mobile.toString()});
@@ -49,4 +50,5 @@ router.post('/', async (req, res) => {
         return responseManager.unauthorisedRequest();
     }
 });
+
 module.exports = router;
