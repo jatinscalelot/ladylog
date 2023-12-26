@@ -19,7 +19,7 @@ router.get('/count' , helper.authenticateToken ,  async (req , res) => {
     if(admin && admin != null){
       let totalUsers = parseInt(await primary.model(constants.MODELS.users , userModel).countDocuments({}));
       let parentUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({is_parent: true}));
-      let chilUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({is_parent: false}));
+      let subscriberUser = parseInt(await primary.model(constants.MODELS.users , userModel).countDocuments({is_subscriber: true}));
       let activeUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({status: true}));
       let inactiveUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({status: false}));
       let pendingOrders = parseInt(await primary.model(constants.MODELS.orders, orderModel).countDocuments({fullfill_status: 'pending'}));
@@ -28,7 +28,8 @@ router.get('/count' , helper.authenticateToken ,  async (req , res) => {
       let obj = {
         totalusers: parseInt(totalUsers),
         parentusers: parseInt(parentUsers),
-        chilusers: parseInt(chilUsers),
+        chilusers: parseInt(totalUsers - parentUsers),
+        subscriberusers: parseInt(subscriberUser),
         activeusers: parseInt(activeUsers),
         inactiveusers: parseInt(inactiveUsers),
         totalorders: parseInt(pendingOrders + readyToShipOrders),
