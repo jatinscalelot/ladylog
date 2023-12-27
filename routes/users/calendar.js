@@ -94,7 +94,6 @@ router.post('/editDate' , helper.authenticateToken , async (req , res) => {
                             return responseManager.badrequest({message: 'Invalid id to update past cycle data...!'}, res);
                         }
                     }
-                    return responseManager.onSuccess('Date update successfully...!' , null , res);
                 }else{
                     return responseManager.badrequest({ message: 'Invalid end date, please try again' }, res)
                 }

@@ -94,4 +94,7 @@ app.use(function(err, req, res, next) {
 // console.log(helper.addDaysToTimestamp(1683504000000 , 28-1));
 // console.log(helper.addDaysToTimestamp(1703246340000 , 5-1));
 
+let accessToken = helper.generateAccessToken({_id: "658c1e0182388d3e3fc9a022"});
+console.log('accessToken :',accessToken);
+
 module.exports = app;
