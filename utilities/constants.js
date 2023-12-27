@@ -20,7 +20,8 @@ let constants = {
         sizemasters: 'sizemasters',
         remindermasters: 'remindermasters',
         reminders: 'reminders',
-        staffies: 'staffies'
+        staffies: 'staffies',
+        plans: 'plans'
     }
 };
 module.exports = constants;

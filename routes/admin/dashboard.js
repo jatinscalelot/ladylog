@@ -228,7 +228,7 @@ router.get('/orderreports' , helper.authenticateToken , async (req , res) => {
         totalordersReports: totalordersReports,
         pendingOrderReports: pendingOrderReports,
         deliveredOrderReports: deliveredOrderReports,
-      }
+      };
       return responseManager.onSuccess('Order reports...!' , data , res);
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, please try again...!'} , res);

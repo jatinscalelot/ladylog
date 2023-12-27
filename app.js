@@ -45,6 +45,7 @@ const adminpaths = [
   {pathUrl: '/stories', routerFile: 'story'},
   {pathUrl: '/sizeMaster', routerFile: 'sizeMaster'},
   {pathUrl: '/reminderMaster', routerFile: 'reminderMaster'},
+  {pathUrl: '/plan', routerFile: 'plan'},
   {pathUrl: '/invoicesettings', routerFile: 'invoicesettings'},
 ];
 adminpaths.forEach((path) => {
@@ -66,6 +67,7 @@ const userpaths = [
   { pathUrl: '/order', routerFile: 'order' },
   { pathUrl: '/review', routerFile: 'review' },
   { pathUrl: '/reminder', routerFile: 'reminder' },
+  { pathUrl: '/subscriber', routerFile: 'subscriber' },
 ];
 userpaths.forEach((path) => {
   app.use('/user' + path.pathUrl, require('./routes/users/' + path.routerFile));
