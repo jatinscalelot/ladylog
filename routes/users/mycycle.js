@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 
+const mongoose = require('mongoose');
 const mongoConnection = require('../../utilities/connections');
 const responseManager = require('../../utilities/response.manager');
 const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const userModel = require('../../models/users/users.model');
 const mycycleModel = require('../../models/users/mycycle.model');
-const mongoose = require('mongoose');
 
 // function getTimestampsBetweenDates(startTimestamp, endTimestamp) {
 //     const timestamps = [];

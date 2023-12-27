@@ -174,4 +174,38 @@ router.post('/save' , helper.authenticateToken , async (req , res) => {
   }
 });
 
+router.post('/changestatus' , helper.authenticateToken , async (req , res) => {
+  const {planId , status} = req.body;
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+    if(adminData && adminData != null){
+      if(planId && planId.trim() != '' && mongoose.Types.ObjectId.isValid(planId)){
+        let planData = await primary.model(constants.MODELS.plans , planModel).findById(planId).select('-createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+        if(planData && planData != null){
+          if(status === true || status === false){
+            let obj = {
+              status: status,
+              updatedBy: new mongoose.Types.ObjectId(adminData._id),
+              updatedAt: new Date()
+            };
+            let updatedPlanData = await primary.model(constants.MODELS.plans , planModel).findByIdAndUpdate(planData._id , obj , {returnOriginal: false}).lean();
+            return responseManager.onSuccess('Plan data updated successfully...!' , 1 , res);
+          }else{
+            return responseManager.badrequest({message: 'Invalid status...!'}, res);
+          }
+        }else{
+          return responseManager.badrequest({message: 'Invalid id to get plan...!'}, res);
+        }
+      }else{
+        return responseManager.badrequest({message: 'Invalid id to get plan...!'}, res);
+      }
+    }else{
+      return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+  }else{
+    return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+  }
+});
+
 module.exports = router;
