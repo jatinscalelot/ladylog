@@ -31,11 +31,12 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
             const currentTimestamp = Date.now();
             if(currentTimestamp > userData.period_end_date){
                 let obj = {
-                    period_start_date: userData.period_start_date,
-                    period_end_date: userData.period_end_date,
-                    period_days: userData.period_days,
+                    period_start_date: new Date(userData.period_start_date),
+                    period_start_date_timestamp: userData.period_start_date,
+                    period_end_date: new Date(userData.period_end_date),
+                    period_start_date_timestamp: userData.period_end_date,
                     createdBy: new mongoose.Types.ObjectId(userData._id)
-                }
+                };
                 await primary.model(constants.MODELS.mycycles , mycycleModel).create(obj);
                 const next_period_start_date = helper.addDaysToTimestamp(userData.period_start_date , userData.cycle-1);
                 const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , userData.period_days-1);
@@ -69,28 +70,6 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     }
                 }
                 return responseManager.onSuccess('Cycle data...!' , data , res);
-            }
-        }else{
-            return responseManager.badrequest({ message: 'Invalid token to get user, please try again' }, res);
-        }
-    }else{
-        return responseManager.badrequest({ message: 'Invalid token to get user, please try again' }, res); 
-    }
-});
-
-router.post('/editDate' , helper.authenticateToken , async (req , res) => {
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
-        if(userData && userData != null){
-            const {period_start_date , period_end_date} = req.body;
-            if(period_start_date && period_end_date){
-                let updateUserData = await primary.model(constants.MODELS.users , userModel).findByIdAndUpdate(userData._id , {period_start_date: period_start_date , period_end_date: period_end_date});
-                return responseManager.onSuccess('Date update successfully...!' , null , res);
-            }else{
-                return responseManager.badrequest({ message: 'Invalid data to update date, please try again' }, res)
             }
         }else{
             return responseManager.badrequest({ message: 'Invalid token to get user, please try again' }, res);
