@@ -97,7 +97,7 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                                           };
                                           previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newPreviousCycleObj);
                                         }
-                                        return responseManager.onSuccess('User profile updated successfully!', 1, res);
+                                        return responseManager.onSuccess('User profile updated successfully!', updatedUserData , res);
                                     }else{
                                       return responseManager.badrequest({message: 'Invalid date of birth...!'}, res);
                                     }
