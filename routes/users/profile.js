@@ -8,6 +8,10 @@ const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const userModel = require('../../models/users/users.model');
 const mycycleModel = require('../../models/users/mycycle.model');
+const planModel = require('../../models/admin/plan.model');
+const sizeMasterModel = require('../../models/admin/size.master');
+const addressModel =  require('../../models/users/address.model');
+const subscriberModel = require('../../models/users/subscriber.model');
 const upload = require('../../utilities/multer.functions');
 const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
@@ -34,8 +38,15 @@ router.get('/', helper.authenticateToken, async (req, res) => {
                 goal: userData.goal
             };
             if(userData.is_subscriber === true){
-
+              let subscriberData = await primary.model(constants.MODELS.subscribers , subscriberModel).findById(userData.active_subscriber_plan).populate([
+                {path: 'plan' , model: primary.model(constants.MODELS.plans , planModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+                {path: 'size' , model: primary.model(constants.MODELS.sizemasters , sizeMasterModel) , select: '_id size_name'},
+                {path: 'address' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'}
+              ]).select('-paymentId -status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+              
+              data.plan = subscriberData;
             }else{
+              data.plan = {};
             }
             return responseManager.onSuccess('User profile', data, res);
         } else {
@@ -199,6 +210,6 @@ router.post('/uploadpicture' , helper.authenticateToken , upload.single('profile
     }else{
       return responseManager.badrequest({message: 'Invalid token to get user, please try again'}, res);
     }
-  });
+});
 
 module.exports = router;
