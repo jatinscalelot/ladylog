@@ -57,6 +57,7 @@ router.post('/', helper.authenticateToken, async (req, res) => {
         const next_period_start_date = helper.addDaysToTimestamp(last_period_start_date , cycle-1); // This function give me timestamp of next day of after 28 days but i want to get timestamp of after 28 days so i minus 1 day in cycle to get timestamp of after 28 days...
         const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , period_days-1); // same reason...
         if(userData && userData != null && userData.status === true){
+          if(userData.is_profile_completed === false){
             if(name && name.trim() != ''){
                 if(goal && goal.trim != '' && goals.includes(goal)){
                     if(cycle && Number.isInteger(cycle) && cycle >= 21 && cycle <= 100){
@@ -118,6 +119,9 @@ router.post('/', helper.authenticateToken, async (req, res) => {
             }else{
               return responseManager.badrequest({message: 'Please enter your name...!'}, res);
             }
+          }else{
+            return responseManager.badrequest({message: 'Your profile is complated...!'}, res);
+          }
         }else{
             return responseManager.badrequest({message: 'Invalid token to update user profile, please try again'}, res);
         }
