@@ -13,7 +13,6 @@ const allowedContentTypes = require('../../utilities/content-types');
 const aws = require('../../utilities/aws');
 
 function isValidTimeStamp(timestamp){
-  console.log('date :',new Date(timestamp));
   let valid = ((new Date(timestamp)).getTime()) > 0;
   return valid;
 }
@@ -34,6 +33,10 @@ router.get('/', helper.authenticateToken, async (req, res) => {
                 dob: userData.dob,
                 goal: userData.goal
             };
+            if(userData.is_subscriber === true){
+
+            }else{
+            }
             return responseManager.onSuccess('User profile', data, res);
         } else {
             return responseManager.badrequest({ message: 'Invalid token to get user profile, please try again' }, res);
@@ -59,8 +62,7 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                     if(cycle && Number.isInteger(cycle) && cycle >= 21 && cycle <= 100){
                         if(period_days && Number.isInteger(period_days) && period_days >= 1 && period_days <= 7){
                             if(last_period_start_date && Number.isInteger(last_period_start_date) && isValidTimeStamp(last_period_start_date)){
-                                const check_last_period_end_date = helper.addDaysToTimestamp(last_period_start_date , period_days - 1);
-                                if(last_period_end_date && Number.isInteger(last_period_end_date) && isValidTimeStamp(last_period_end_date) && last_period_end_date === check_last_period_end_date){
+                                if(last_period_end_date && Number.isInteger(last_period_end_date) && isValidTimeStamp(last_period_end_date)){
                                     if(dob && dob.trim() != ''){
                                         let obj = {
                                             name: name,
@@ -73,16 +75,28 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                                             is_profile_completed: true,
                                             updatedBy: new mongoose.Types.ObjectId(req.token._id)
                                         };
-                                        await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(req.token._id, obj);
-                                        let updatedData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
-                                        let lastCycle = {
-                                            period_start_date: last_period_start_date,
-                                            period_end_date: last_period_end_date,
-                                            period_days: period_days,
-                                            createdBy: new mongoose.Types.ObjectId(req.token._id)   
+                                        let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , obj , {returnOriginal: false}).lean();
+                                        let previousCycleObj = {
+                                            period_start_date: new Date(last_period_start_date),
+                                            period_start_date_timestamp: last_period_start_date,
+                                            period_end_date: new Date(last_period_end_date),
+                                            period_end_date_timestamp: last_period_end_date,
+                                            createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
                                         };
-                                        await primary.model(constants.MODELS.mycycles , mycycleModel).create(lastCycle);
-                                        return responseManager.onSuccess('User profile updated successfully!', updatedData, res);
+                                        let previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(previousCycleObj);
+                                        for(let i=0 ; i<12 ; i++){
+                                          let period_start_date_timestamp = helper.minusDaysToTimestamp(previousCycle.period_start_date_timestamp , updatedUserData.cycle - 1);
+                                          let period_end_date_timestamp = helper.addDaysToTimestamp(period_start_date_timestamp , updatedUserData.period_days - 1);
+                                          let newPreviousCycleObj = {
+                                            period_start_date: new Date(period_start_date_timestamp),
+                                            period_start_date_timestamp: period_start_date_timestamp,
+                                            period_end_date: new Date(period_end_date_timestamp),
+                                            period_end_date_timestamp: period_end_date_timestamp,
+                                            createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
+                                          };
+                                          previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newPreviousCycleObj);
+                                        }
+                                        return responseManager.onSuccess('User profile updated successfully!', 1, res);
                                     }else{
                                       return responseManager.badrequest({message: 'Invalid date of birth...!'}, res);
                                     }

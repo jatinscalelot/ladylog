@@ -17,6 +17,18 @@ let schema = new mongoose.Schema({
     type: mongoose.Types.ObjectId,
     require: true
   },
+  active: {
+    type: Boolean,
+    default: true
+  },
+  buyAt: {
+    type: Date,
+    require: true
+  },
+  buyAt_timestamp: {
+    type: Number,
+    require: true
+  },
   status: {
     type: Boolean,
     default: true

@@ -40,13 +40,13 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                 const next_period_start_date = helper.addDaysToTimestamp(userData.period_start_date , userData.cycle-1);
                 const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , userData.period_days-1);
                 let updateUser = await primary.model(constants.MODELS.users , userModel).findByIdAndUpdate(userData._id , {period_start_date: next_period_start_date , period_end_date: next_period_end_date} , {returnOriginal: false}).lean();
-                let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(1).lean();
+                let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date_timestamp: -1}).limit(1).lean();
                 let data = {
                     period_days: updateUser.period_days,
                     cycle_length: userData.cycle,
                     lastCycle: {
-                        period_start_date: lastCycle[0].period_start_date,
-                        period_end_date: lastCycle[0].period_end_date
+                        period_start_date: lastCycle[0].period_start_date_timestamp,
+                        period_end_date: lastCycle[0].period_end_date_timestamp
                     },
                     nextCycle: {
                         period_start_date: updateUser.period_start_date,
@@ -55,13 +55,13 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                 }
                 return responseManager.onSuccess('Cycle data...!' , data , res);
             }else{
-                let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date: -1}).limit(1).lean();
+                let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).sort({period_start_date_timestamp: -1}).limit(1).lean();
                 let data = {
                     period_days: userData.period_days,
                     cycle_length: userData.cycle,
                     lastCycle: {
-                        period_start_date: lastCycle[0].period_start_date,
-                        period_end_date: lastCycle[0].period_end_date
+                        period_start_date: lastCycle[0].period_start_date_timestamp,
+                        period_end_date: lastCycle[0].period_end_date_timestamp
                     },
                     nextCycle: {
                         period_start_date: userData.period_start_date,
