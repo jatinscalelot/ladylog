@@ -34,7 +34,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     period_start_date: new Date(userData.period_start_date),
                     period_start_date_timestamp: userData.period_start_date,
                     period_end_date: new Date(userData.period_end_date),
-                    period_start_date_timestamp: userData.period_end_date,
+                    period_end_date_timestamp: userData.period_end_date,
                     createdBy: new mongoose.Types.ObjectId(userData._id)
                 };
                 await primary.model(constants.MODELS.mycycles , mycycleModel).create(obj);

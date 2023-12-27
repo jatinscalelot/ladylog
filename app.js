@@ -58,6 +58,7 @@ const userpaths = [
   { pathUrl: '/address', routerFile: 'address' },
   { pathUrl: '/profile', routerFile: 'profile' },
   { pathUrl: '/mycycle', routerFile: 'mycycle' },
+  { pathUrl: '/calendar', routerFile: 'calendar' },
   { pathUrl: '/userSymptoms', routerFile: 'userSymptoms' },
   { pathUrl: '/symptoms', routerFile: 'symptoms' },
   { pathUrl: '/history', routerFile: 'history' },
