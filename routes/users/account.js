@@ -90,7 +90,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                           period_start_date_timestamp: period_start_date_timestamp,
                           period_end_date: new Date(period_end_date_timestamp),
                           period_end_date_timestamp: period_end_date_timestamp,
-                          createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
+                          createdBy: new mongoose.Types.ObjectId(childData._id)
                         };
                         previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newPreviousCycleObj);
                       }
