@@ -53,8 +53,8 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                         select: 'plan_type'
                     }).lean();
                     let data = {
-                        period_days: updateUser.period_days,
-                        cycle_length: userData.cycle,
+                        period_days: parseInt(userData.period_days),
+                        cycle_length: parseInt(userData.cycle),
                         plan_type: subscriberData.plan.plan_type,
                         nextCycle: {
                             period_start_date: last_next_cycle_data[0].period_start_date_timestamp,
@@ -68,8 +68,8 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     return responseManager.onSuccess('Cycle data...!' , data , res);
                 }else{
                     let data = {
-                        period_days: updateUser.period_days,
-                        cycle_length: userData.cycle,
+                        period_days: parseInt(userData.period_days),
+                        cycle_length: parseInt(userData.cycle),
                         plan_type: 'free',
                         nextCycle: {
                             period_start_date: last_next_cycle_data[0].period_start_date_timestamp,
