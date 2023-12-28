@@ -66,7 +66,6 @@ router.post('/useroverview' , helper.authenticateToken , async (req , res) => {
         lean: true
       }).then((users) => {
         async.forEachSeries(users.docs, (user , next_user) => {
-          console.log('user :',user);
           ( async () => {
             const currentdate_timestamp = Date.now();
             if(currentdate_timestamp >= user.period_start_date && currentdate_timestamp <= user.period_end_date){
@@ -75,7 +74,6 @@ router.post('/useroverview' , helper.authenticateToken , async (req , res) => {
               user.log_status = false;
             }
             let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: user._id}).sort({period_start_date_timestamp: -1}).limit(1).lean();
-            console.log('lastCycle :',lastCycle);
             user.last_period_start_date = lastCycle[0].period_start_date_timestamp;
             user.last_period_end_date = lastCycle[0].period_end_date_timestamp;
             next_user();
