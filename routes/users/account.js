@@ -71,26 +71,33 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                         is_profile_completed: true,
                         is_parent: false,
                         parentId: new mongoose.Types.ObjectId(userData._id),
-                        createdBy: new mongoose.Types.ObjectId(req.token._id)
+                        createdBy: new mongoose.Types.ObjectId(req.token._id),
+                        createdAt_timestamp: Date.now()
                       };
                       const childData = await primary.model(constants.MODELS.users, userModel).create(obj);
+                      let channelIdObj = {
+                        channelID: childData._id.toString() + '_' + userData.mobile.toString(),
+                        updatedBy: new mongoose.Types.ObjectId(childData._id),
+                        updatedAt: new Date()
+                      };
+                      let updatedChildUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(childData._id , channelIdObj , {returnOriginal: false}).lean();
                       let previousCycleObj = {
                         period_start_date: new Date(last_period_start_date),
                         period_start_date_timestamp: last_period_start_date,
                         period_end_date: new Date(last_period_end_date),
                         period_end_date_timestamp: last_period_end_date,
-                        createdBy: new mongoose.Types.ObjectId(childData._id)   
+                        createdBy: new mongoose.Types.ObjectId(updatedChildUserData._id)   
                       };
                       let previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(previousCycleObj);
                       for(let i=0 ; i<12 ; i++){
-                        let period_start_date_timestamp = helper.minusDaysToTimestamp(previousCycle.period_start_date_timestamp , childData.cycle - 1);
-                        let period_end_date_timestamp = helper.addDaysToTimestamp(period_start_date_timestamp , childData.period_days - 1);
+                        let period_start_date_timestamp = helper.minusDaysToTimestamp(previousCycle.period_start_date_timestamp , updatedChildUserData.cycle - 1);
+                        let period_end_date_timestamp = helper.addDaysToTimestamp(period_start_date_timestamp , updatedChildUserData.period_days - 1);
                         let newPreviousCycleObj = {
                           period_start_date: new Date(period_start_date_timestamp),
                           period_start_date_timestamp: period_start_date_timestamp,
                           period_end_date: new Date(period_end_date_timestamp),
                           period_end_date_timestamp: period_end_date_timestamp,
-                          createdBy: new mongoose.Types.ObjectId(childData._id)
+                          createdBy: new mongoose.Types.ObjectId(updatedChildUserData._id)
                         };
                         previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newPreviousCycleObj);
                       }

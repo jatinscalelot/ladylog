@@ -65,68 +65,68 @@ router.post('/', helper.authenticateToken, async (req, res) => {
         const {name, goal, cycle, period_days, last_period_start_date, last_period_end_date , dob} = req.body;
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
-        const next_period_start_date = helper.addDaysToTimestamp(last_period_start_date , cycle-1); // This function give me timestamp of next day of after 28 days but i want to get timestamp of after 28 days so i minus 1 day in cycle to get timestamp of after 28 days...
-        const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , period_days-1); // same reason...
         if(userData && userData != null && userData.status === true){
           if(userData.is_profile_completed === false){
             if(name && name.trim() != ''){
-                if(goal && goal.trim != '' && goals.includes(goal)){
-                    if(cycle && Number.isInteger(cycle) && cycle >= 21 && cycle <= 100){
-                        if(period_days && Number.isInteger(period_days) && period_days >= 1 && period_days <= 7){
-                            if(last_period_start_date && Number.isInteger(last_period_start_date) && isValidTimeStamp(last_period_start_date)){
-                                if(last_period_end_date && Number.isInteger(last_period_end_date) && isValidTimeStamp(last_period_end_date)){
-                                    if(dob && dob.trim() != ''){
-                                        let obj = {
-                                            name: name,
-                                            goal: goal,
-                                            cycle: cycle,
-                                            period_days: period_days,
-                                            period_start_date: next_period_start_date,
-                                            period_end_date: next_period_end_date,
-                                            dob: dob,
-                                            is_profile_completed: true,
-                                            updatedBy: new mongoose.Types.ObjectId(req.token._id)
-                                        };
-                                        let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , obj , {returnOriginal: false}).lean();
-                                        let previousCycleObj = {
-                                            period_start_date: new Date(last_period_start_date),
-                                            period_start_date_timestamp: last_period_start_date,
-                                            period_end_date: new Date(last_period_end_date),
-                                            period_end_date_timestamp: last_period_end_date,
-                                            createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
-                                        };
-                                        let previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(previousCycleObj);
-                                        for(let i=0 ; i<12 ; i++){
-                                          let period_start_date_timestamp = helper.minusDaysToTimestamp(previousCycle.period_start_date_timestamp , updatedUserData.cycle - 1);
-                                          let period_end_date_timestamp = helper.addDaysToTimestamp(period_start_date_timestamp , updatedUserData.period_days - 1);
-                                          let newPreviousCycleObj = {
-                                            period_start_date: new Date(period_start_date_timestamp),
-                                            period_start_date_timestamp: period_start_date_timestamp,
-                                            period_end_date: new Date(period_end_date_timestamp),
-                                            period_end_date_timestamp: period_end_date_timestamp,
-                                            createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
-                                          };
-                                          previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newPreviousCycleObj);
-                                        }
-                                        return responseManager.onSuccess('User profile updated successfully!', updatedUserData , res);
-                                    }else{
-                                      return responseManager.badrequest({message: 'Invalid date of birth...!'}, res);
-                                    }
-                                }else{
-                                  return responseManager.badrequest({message: 'Invalid last period end date...!'}, res);
-                                }
-                            }else{
-                              return responseManager.badrequest({message: 'Invalid last period start date...!'}, res);
-                            }
+              if(goal && goal.trim != '' && goals.includes(goal)){
+                if(cycle && Number.isInteger(cycle) && cycle >= 21 && cycle <= 100){
+                  if(period_days && Number.isInteger(period_days) && period_days >= 1 && period_days <= 7){
+                    if(last_period_start_date && Number.isInteger(last_period_start_date) && isValidTimeStamp(last_period_start_date)){
+                      if(last_period_end_date && Number.isInteger(last_period_end_date) && isValidTimeStamp(last_period_end_date)){
+                        if(dob && dob.trim() != ''){
+                          const next_period_start_date = helper.addDaysToTimestamp(last_period_start_date , cycle-1); // This function give me timestamp of next day of after 28 days but i want to get timestamp of after 28 days so i minus 1 day in cycle to get timestamp of after 28 days...
+                          const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , period_days-1); // same reason...
+                          let obj = {
+                              name: name,
+                              goal: goal,
+                              cycle: cycle,
+                              period_days: period_days,
+                              period_start_date: next_period_start_date,
+                              period_end_date: next_period_end_date,
+                              dob: dob,
+                              is_profile_completed: true,
+                              updatedBy: new mongoose.Types.ObjectId(req.token._id)
+                          };
+                          let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , obj , {returnOriginal: false}).lean();
+                          let previousCycleObj = {
+                              period_start_date: new Date(last_period_start_date),
+                              period_start_date_timestamp: last_period_start_date,
+                              period_end_date: new Date(last_period_end_date),
+                              period_end_date_timestamp: last_period_end_date,
+                              createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
+                          };
+                          let previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(previousCycleObj);
+                          for(let i=0 ; i<12 ; i++){
+                            let period_start_date_timestamp = helper.minusDaysToTimestamp(previousCycle.period_start_date_timestamp , updatedUserData.cycle - 1);
+                            let period_end_date_timestamp = helper.addDaysToTimestamp(period_start_date_timestamp , updatedUserData.period_days - 1);
+                            let newPreviousCycleObj = {
+                              period_start_date: new Date(period_start_date_timestamp),
+                              period_start_date_timestamp: period_start_date_timestamp,
+                              period_end_date: new Date(period_end_date_timestamp),
+                              period_end_date_timestamp: period_end_date_timestamp,
+                              createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
+                            };
+                            previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newPreviousCycleObj);
+                          }
+                          return responseManager.onSuccess('User profile updated successfully!', updatedUserData , res);
                         }else{
-                          return responseManager.badrequest({message: 'Invalid period days length...!'}, res);
+                          return responseManager.badrequest({message: 'Invalid date of birth...!'}, res);
                         }
+                      }else{
+                        return responseManager.badrequest({message: 'Invalid last period end date...!'}, res);
+                      }
                     }else{
-                      return responseManager.badrequest({message: 'Invalid cycle length...!'}, res);
+                      return responseManager.badrequest({message: 'Invalid last period start date...!'}, res);
                     }
+                  }else{
+                    return responseManager.badrequest({message: 'Invalid period days length...!'}, res);
+                  }
                 }else{
-                  return responseManager.badrequest({message: 'Invalid goal...!'}, res);
+                  return responseManager.badrequest({message: 'Invalid cycle length...!'}, res);
                 }
+              }else{
+                return responseManager.badrequest({message: 'Invalid goal...!'}, res);
+              }
             }else{
               return responseManager.badrequest({message: 'Please enter your name...!'}, res);
             }
