@@ -47,19 +47,19 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
       if(userData.is_parent === true){
         if(name && name.trim() != ''){
           if(goal && goal.trim() != '' && goals.includes(goal)){
-            if(cycle){
-              if(period_days){
-                if(dob){
-                  if(last_period_end_date){
-                    if(last_period_end_date){
+            if(cycle && Number.isInteger(cycle) && cycle >= 21 && cycle <= 100){
+              if(period_days && Number.isInteger(period_days) && period_days >= 1 && period_days <= 7){
+                if(dob && dob.trim() != ''){
+                  if(last_period_start_date && Number.isInteger(last_period_start_date) && isValidTimeStamp(last_period_start_date)){
+                    if(last_period_end_date && Number.isInteger(last_period_end_date) && isValidTimeStamp(last_period_end_date)){
                       const next_period_start_date = helper.addDaysToTimestamp(last_period_end_date , cycle-1); // This function give me timestamp of next day of after 28 days but i want to get timestamp of after 28 days so i minus 1 day in cycle to get timestamp of after 28 days...
                       const next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , period_days-1); // same reason...
                       let obj = {
                         mobile: '',
                         name: name,
                         goal: goal,
-                        cycle: cycle,
-                        period_days: period_days,
+                        cycle: parseInt(cycle),
+                        period_days: parseInt(period_days),
                         period_start_date: next_period_start_date,
                         period_end_date: next_period_end_date,
                         dob: dob,
@@ -69,13 +69,26 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                         createdBy: new mongoose.Types.ObjectId(req.token._id)
                       };
                       const childData = await primary.model(constants.MODELS.users, userModel).create(obj);
-                      let lastCycle = {
-                        period_start_date: last_period_start_date,
-                        period_end_date: last_period_end_date,
-                        period_days: period_days,
+                      let previousCycleObj = {
+                        period_start_date: new Date(last_period_start_date),
+                        period_start_date_timestamp: last_period_start_date,
+                        period_end_date: new Date(last_period_end_date),
+                        period_end_date_timestamp: last_period_end_date,
                         createdBy: new mongoose.Types.ObjectId(childData._id)   
                       };
-                      await primary.model(constants.MODELS.mycycles , mycycleModel).create(lastCycle);
+                      let previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(previousCycleObj);
+                      for(let i=0 ; i<12 ; i++){
+                        let period_start_date_timestamp = helper.minusDaysToTimestamp(previousCycle.period_start_date_timestamp , childData.cycle - 1);
+                        let period_end_date_timestamp = helper.addDaysToTimestamp(period_start_date_timestamp , childData.period_days - 1);
+                        let newPreviousCycleObj = {
+                          period_start_date: new Date(period_start_date_timestamp),
+                          period_start_date_timestamp: period_start_date_timestamp,
+                          period_end_date: new Date(period_end_date_timestamp),
+                          period_end_date_timestamp: period_end_date_timestamp,
+                          createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
+                        };
+                        previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newPreviousCycleObj);
+                      }
                       return responseManager.onSuccess('Account added successfully...!' , 1 , res);
                     }else{
                       return responseManager.badrequest({message: 'Invalid last period end date, Please try again...!'}, res);
