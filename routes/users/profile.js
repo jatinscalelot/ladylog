@@ -43,10 +43,7 @@ router.get('/', helper.authenticateToken, async (req, res) => {
                 {path: 'size' , model: primary.model(constants.MODELS.sizemasters , sizeMasterModel) , select: '_id size_name'},
                 {path: 'address' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'}
               ]).select('-paymentId -status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
-              
               data.plan = subscriberData;
-            }else{
-              data.plan = {};
             }
             return responseManager.onSuccess('User profile', data, res);
         } else {
