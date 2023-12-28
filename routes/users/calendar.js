@@ -42,7 +42,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
     }
 });
 
-router.post('/editDate' , helper.authenticateToken , async (req , res) => {
+router.post('/editdate' , helper.authenticateToken , async (req , res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     res.setHeader('Access-Control-Allow-Origin', '*');
     const {period_start_date , period_end_date , cycleId} = req.body;
