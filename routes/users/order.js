@@ -41,7 +41,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             },{
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status total_quantity total_discounted_amount orderAt deliverAt',
+                select: '_id orderId fullfill_status financial_status total_quantity total_discounted_amount orderAt deliverAt invoiceNo invoice_path',
                 sort: {createdAt: -1},
                 lean: true
             }).then((orders) => {
