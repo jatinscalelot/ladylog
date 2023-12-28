@@ -65,8 +65,8 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                         goal: goal,
                         cycle: parseInt(cycle),
                         period_days: parseInt(period_days),
-                        period_start_date: next_period_start_date,
-                        period_end_date: next_period_end_date,
+                        period_start_date: last_period_start_date,
+                        period_end_date: last_period_end_date,
                         dob: dob,
                         is_profile_completed: true,
                         is_parent: false,
@@ -81,6 +81,14 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                         updatedAt: new Date()
                       };
                       let updatedChildUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(childData._id , channelIdObj , {returnOriginal: false}).lean();
+                      let nextCycleObj = {
+                        period_start_date: new Date(next_period_start_date),
+                        period_start_date_timestamp: next_period_start_date,
+                        period_end_date: new Date(next_period_end_date),
+                        period_end_date_timestamp: next_period_end_date,
+                        createdBy: new mongoose.Types.ObjectId(updatedChildUserData._id)
+                      };
+                      let nextCycle = await primary.model(constants.MODELS.mycycles, mycycleModel).create(nextCycleObj);
                       let previousCycleObj = {
                         period_start_date: new Date(last_period_start_date),
                         period_start_date_timestamp: last_period_start_date,
