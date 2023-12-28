@@ -29,6 +29,7 @@ router.get('/count' , helper.authenticateToken ,  async (req , res) => {
         totalusers: parseInt(totalUsers),
         parentusers: parseInt(parentUsers),
         chilusers: parseInt(totalUsers - parentUsers),
+        freeusers: parseInt(totalUsers - subscriberUser),
         subscriberusers: parseInt(subscriberUser),
         activeusers: parseInt(activeUsers),
         inactiveusers: parseInt(inactiveUsers),
