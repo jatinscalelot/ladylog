@@ -119,6 +119,7 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                     if(addressData && addressData != null && addressData.status === true){
                         if(veriants && Array.isArray(veriants) && veriants.length > 0){
                             const finalVeriants = [];
+                            let updateVeriantsArray = [];
                             let total_quantity = 0;
                             let total_price = 0.0;
                             let total_sgst = 0.0;
@@ -132,49 +133,62 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                     if(veriant._id && veriant._id.trim() != '' && mongoose.Types.ObjectId.isValid(veriant._id) && veriant.quantity && Number.isInteger(veriant.quantity) && !(isNaN(veriant.quantity)) && veriant.quantity > 0){
                                         let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(veriant._id).lean();
                                         if(veriantData && veriantData != null && veriantData.status === true){
-                                            let quantity = parseInt(veriant.quantity);
-                                            let price = parseFloat(parseFloat(veriantData.price).toFixed(2));
-                                            let totalprice = parseFloat((parseInt(veriant.quantity) * price).toFixed(2));
-                                            let sgst = parseFloat(parseFloat(parseFloat(parseFloat(totalprice) * 9) / 100).toFixed(2));
-                                            let cgst = parseFloat(parseFloat(parseFloat(parseFloat(totalprice) * 9) / 100).toFixed(2));
-                                            let gst = parseFloat(parseFloat(sgst + cgst).toFixed(2));
-                                            let gross_amount = parseFloat(parseFloat(totalprice + sgst + cgst).toFixed(2));
-                                            let discount = 0;
-                                            let discounted_amount = 0.0;
-                                            if(veriantData.discount_per && veriantData.discount_per > 0){
-                                                discount = parseFloat(parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(veriantData.discount_per)) / 100).toFixed(2));
-                                                discounted_amount = parseFloat((gross_amount - discount).toFixed(2));
-                                            }else if(veriantData.discount_amount && veriantData.discount_amount > 0){
-                                                discount = parseFloat((veriantData.discount_amount * parseInt(veriant.quantity)).toFixed(2))
-                                                discounted_amount = parseFloat((gross_amount - discount).toFixed(2));
+                                            if(veriantData.stock > 0){
+                                                if(veriant.quantity <= veriantData.stock){
+                                                    let quantity = parseInt(veriant.quantity);
+                                                    let price = parseFloat(parseFloat(veriantData.price).toFixed(2));
+                                                    let totalprice = parseFloat((parseInt(veriant.quantity) * price).toFixed(2));
+                                                    let sgst = parseFloat(parseFloat(parseFloat(parseFloat(totalprice) * 9) / 100).toFixed(2));
+                                                    let cgst = parseFloat(parseFloat(parseFloat(parseFloat(totalprice) * 9) / 100).toFixed(2));
+                                                    let gst = parseFloat(parseFloat(sgst + cgst).toFixed(2));
+                                                    let gross_amount = parseFloat(parseFloat(totalprice + sgst + cgst).toFixed(2));
+                                                    let discount = 0;
+                                                    let discounted_amount = 0.0;
+                                                    if(veriantData.discount_per && veriantData.discount_per > 0){
+                                                        discount = parseFloat(parseFloat(parseFloat(parseFloat(gross_amount) * parseFloat(veriantData.discount_per)) / 100).toFixed(2));
+                                                        discounted_amount = parseFloat((gross_amount - discount).toFixed(2));
+                                                    }else if(veriantData.discount_amount && veriantData.discount_amount > 0){
+                                                        discount = parseFloat((veriantData.discount_amount * parseInt(veriant.quantity)).toFixed(2))
+                                                        discounted_amount = parseFloat((gross_amount - discount).toFixed(2));
+                                                    }else{
+                                                        discounted_amount = parseFloat(gross_amount);
+                                                    }
+                                                    total_quantity += quantity;
+                                                    total_price += totalprice;
+                                                    total_sgst += sgst;
+                                                    total_cgst += cgst;
+                                                    total_gst += gst;
+                                                    total_gross_amount += gross_amount;
+                                                    total_discount += discount;
+                                                    total_discounted_amount += discounted_amount;
+                                                    let veriantObj = {
+                                                        veriant: new mongoose.Types.ObjectId(veriantData._id),
+                                                        price: parseFloat(parseFloat(veriantData.price).toFixed(2)),
+                                                        quantity: parseInt(veriant.quantity),
+                                                        total_price: parseFloat(totalprice.toFixed(2)),
+                                                        sgst: parseFloat(parseFloat(sgst).toFixed(2)),
+                                                        cgst: parseFloat(parseFloat(cgst).toFixed(2)),
+                                                        gst: parseFloat(parseFloat(gst).toFixed(2)),
+                                                        gross_amount: parseFloat(parseFloat(gross_amount).toFixed(2)),
+                                                        discount_per: parseFloat(veriantData.discount_per),
+                                                        discount_amount: parseFloat(veriantData.discount_amount),
+                                                        discount: parseFloat(parseFloat(discount).toFixed(2)),
+                                                        discounted_amount: parseFloat(parseFloat(discounted_amount).toFixed(2)),
+                                                        status: true
+                                                    };
+                                                    finalVeriants.push(veriantObj);
+                                                    let obj = {
+                                                        _id: new mongoose.Types.ObjectId(veriantData._id),
+                                                        quantity: parseInt(veriant.quantity)
+                                                    };
+                                                    updateVeriantsArray.push(obj);
+                                                    next_veriant();
+                                                }else{
+                                                    return responseManager.badrequest({message: 'Out of stock...!'}, res);
+                                                }
                                             }else{
-                                                discounted_amount = parseFloat(gross_amount);
+                                                return responseManager.badrequest({message: 'Product Out of stock...!'}, res);
                                             }
-                                            total_quantity += quantity;
-                                            total_price += totalprice;
-                                            total_sgst += sgst;
-                                            total_cgst += cgst;
-                                            total_gst += gst;
-                                            total_gross_amount += gross_amount;
-                                            total_discount += discount;
-                                            total_discounted_amount += discounted_amount;
-                                            let veriantObj = {
-                                                veriant: new mongoose.Types.ObjectId(veriantData._id),
-                                                price: parseFloat(parseFloat(veriantData.price).toFixed(2)),
-                                                quantity: parseInt(veriant.quantity),
-                                                total_price: parseFloat(totalprice.toFixed(2)),
-                                                sgst: parseFloat(parseFloat(sgst).toFixed(2)),
-                                                cgst: parseFloat(parseFloat(cgst).toFixed(2)),
-                                                gst: parseFloat(parseFloat(gst).toFixed(2)),
-                                                gross_amount: parseFloat(parseFloat(gross_amount).toFixed(2)),
-                                                discount_per: parseFloat(veriantData.discount_per),
-                                                discount_amount: parseFloat(veriantData.discount_amount),
-                                                discount: parseFloat(parseFloat(discount).toFixed(2)),
-                                                discounted_amount: parseFloat(parseFloat(discounted_amount).toFixed(2)),
-                                                status: true
-                                            };
-                                            finalVeriants.push(veriantObj);
-                                            next_veriant();
                                         }else{
                                             return responseManager.badrequest({message: 'Invalid product veriant or quantity..!'}, res);
                                         }
@@ -213,11 +227,24 @@ router.post('/create' , helper.authenticateToken , async (req , res) => {
                                         createdBy: new mongoose.Types.ObjectId(userData._id)
                                     };
                                     let newOrder = await primary.model(constants.MODELS.orders, orderModel).create(orderObj);
-                                    let data = {
-                                        orderId: newOrder.orderId,
-                                        deliverAt: newOrder.deliverAt
-                                    };
-                                    return responseManager.onSuccess('Order placed successfully...!' , data , res);
+                                    async.forEachSeries(updateVeriantsArray, (updateVeriant , next_updateVeriant) => {
+                                        ( async () => {
+                                            let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(updateVeriant._id).lean();
+                                            let obj = {
+                                                stock: parseInt(veriantData.stock - updateVeriant.quantity)
+                                            };
+                                            let updatedVeriantData = await primary.model(constants.MODELS.veriants, veriantModel).findByIdAndUpdate(veriantData._id , obj , {returnOriginal: false}).lean();
+                                            next_updateVeriant();
+                                        })().catch((error) => {
+                                            return responseManager.onError(error , res);
+                                        });
+                                    }, () => {
+                                        let data = {
+                                            orderId: newOrder.orderId,
+                                            deliverAt: newOrder.deliverAt
+                                        };
+                                        return responseManager.onSuccess('Order placed successfully...!' , data , res);
+                                    })
                                 })().catch((error) => {
                                     return responseManager.onError(error , res);
                                 });
@@ -252,7 +279,7 @@ router.post('/cancel' , helper.authenticateToken , async (req , res) => {
                 let orderData = await primary.model(constants.MODELS.orders, orderModel).findOne({orderId: orderId}).lean();
                 if(orderData && orderData != null){
                     if(orderData.fullfill_status === 'pending' || orderData.fullfill_status === 'ready_to_ship'){
-                        if(orderData.financial_status === 'accept'){
+                        if(orderData.financial_status === 'paid'){
                             let obj = {
                                 fullfill_status: 'cancelled',
                                 financial_status: 'refund',
@@ -261,7 +288,20 @@ router.post('/cancel' , helper.authenticateToken , async (req , res) => {
                                 updatedAt: new Date()
                             };
                             let updatedOrederData = await primary.model(constants.MODELS.orders, orderModel).findByIdAndUpdate(orderData._id , obj , {returnOriginal: false}).lean();
-                            return responseManager.onSuccess('Order cancel succesfully...!', 1 , res);
+                            async.forEachSeries(updatedOrederData.veriants, (veriant , next_veriant) => {
+                                ( async () => {
+                                    let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(veriant.veriant).lean();
+                                    let obj = {
+                                        stock: parseInt(veriantData.stock + veriant.quantity)
+                                    };
+                                    let updatedVeriantData = await primary.model(constants.MODELS.veriants, veriantModel).findByIdAndUpdate(veriantData._id , obj , {returnOriginal: false}).lean();
+                                    next_veriant();
+                                })().catch((error) => {
+                                    return responseManager.onError(error , res);
+                                });
+                            }, () => {
+                                return responseManager.onSuccess('Order cancel succesfully...!', 1 , res);
+                            });
                         }else{
                             let obj = {
                                 fullfill_status: 'cancelled',
@@ -270,7 +310,20 @@ router.post('/cancel' , helper.authenticateToken , async (req , res) => {
                                 updatedAt: new Date()
                             };
                             let updatedOrederData = await primary.model(constants.MODELS.orders, orderModel).findByIdAndUpdate(orderData._id , obj , {returnOriginal: false}).lean();
-                            return responseManager.onSuccess('Order cancel succesfully...!', 1 , res);
+                            async.forEachSeries(updatedOrederData.veriants, (veriant , next_veriant) => {
+                                ( async () => {
+                                    let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(veriant.veriant).lean();
+                                    let obj = {
+                                        stock: parseInt(veriantData.stock + veriant.quantity)
+                                    };
+                                    let updatedVeriantData = await primary.model(constants.MODELS.veriants, veriantModel).findByIdAndUpdate(veriantData._id , obj , {returnOriginal: false}).lean();
+                                    next_veriant();
+                                })().catch((error) => {
+                                    return responseManager.onError(error , res);
+                                });
+                            }, () => {
+                                return responseManager.onSuccess('Order cancel succesfully...!', 1 , res);
+                            });
                         }
                     }else{
                         if(orderData.fullfill_status === 'shipped'){
