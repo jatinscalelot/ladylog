@@ -9,6 +9,11 @@ const userModel = require('../../models/users/users.model');
 const mycycleModel = require('../../models/users/mycycle.model');
 const mongoose = require('mongoose');
 
+function isValidTimeStamp(timestamp){
+  let valid = ((new Date(timestamp)).getTime()) > 0;
+  return valid;
+}
+
 router.get('/' , helper.authenticateToken , async (req , res) => {
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
