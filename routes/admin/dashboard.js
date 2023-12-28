@@ -61,21 +61,23 @@ router.post('/useroverview' , helper.authenticateToken , async (req , res) => {
       },{
         page,
         limit: parseInt(limit),
-        select: '_id name mobile email profile_pic period_start_date period_end_date',
+        select: '_id name mobile email profile_pic',
         sort: {createdAt: -1},
         lean: true
       }).then((users) => {
         async.forEachSeries(users.docs, (user , next_user) => {
           ( async () => {
             const currentdate_timestamp = Date.now();
-            if(currentdate_timestamp >= user.period_start_date && currentdate_timestamp <= user.period_end_date){
+            let last_next_cycle_data = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: user._id}).sort({period_start_date_timestamp: -1}).limit(2).lean();
+            if(currentdate_timestamp >= last_next_cycle_data[0].period_start_date_timestamp  && currentdate_timestamp <= last_next_cycle_data[0].period_end_date_timestamp){
               user.log_status = true;
             }else{
               user.log_status = false;
             }
-            let lastCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: user._id}).sort({period_start_date_timestamp: -1}).limit(1).lean();
-            user.last_period_start_date = lastCycle[0].period_start_date_timestamp;
-            user.last_period_end_date = lastCycle[0].period_end_date_timestamp;
+            user.last_period_start_date = last_next_cycle_data[1].period_start_date_timestamp;
+            user.last_period_end_date = last_next_cycle_data[1].period_end_date_timestamp;
+            user.next_period_start_date = last_next_cycle_data[0].period_start_date_timestamp;
+            user.next_period_end_date = last_next_cycle_data[0].period_end_date_timestamp;
             next_user();
           })().catch((error) => {
             return responseManager.onError(error , res);
