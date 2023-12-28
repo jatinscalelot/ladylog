@@ -26,9 +26,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                 period_start_date = helper.addDaysToTimestamp(period_start_date , userData.cycle - 1);
                 let period_end_date = helper.addDaysToTimestamp(period_start_date , userData.period_days - 1);
                 let obj = {
-                    period_start_date: new Date(period_start_date),
                     period_start_date_timestamp: period_start_date,
-                    period_end_date: new Date(period_end_date),
                     period_end_date_timestamp: period_end_date
                 };
                 pastCycleData.push(obj);
