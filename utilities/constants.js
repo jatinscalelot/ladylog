@@ -22,7 +22,8 @@ let constants = {
         reminders: 'reminders',
         staffies: 'staffies',
         plans: 'plans',
-        subscribers: 'subscribers'
+        subscribers: 'subscribers',
+        settings: 'settings'
     }
 };
 module.exports = constants;

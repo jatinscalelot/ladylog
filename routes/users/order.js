@@ -41,7 +41,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
             },{
                 page,
                 limit: parseInt(limit),
-                select: '_id orderId fullfill_status financial_status total_quantity total_discounted_amount orderAt deliverAt invoiceNo invoice_path',
+                select: '_id orderId fullfill_status financial_status total_quantity total_discounted_amount orderAt deliverAt ready_to_shipped_date shippedAt deliveredAt cancelledAt invoiceNo invoice_path',
                 sort: {createdAt: -1},
                 lean: true
             }).then((orders) => {
@@ -67,7 +67,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                 let orderData = await primary.model(constants.MODELS.orders , orderModel).findOne({orderId: orderId}).populate([
                     {path: 'veriants.veriant' , model: primary.model(constants.MODELS.veriants , veriantModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                     {path: 'addressId' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
-                ]).select('-is_download -shipped_by -status -createdBy -updatedBy -__v').lean();
+                ]).select('-is_download -shipped_by -status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
                 if(orderData && orderData != null){
                     async.forEachSeries(orderData.veriants, (veriant , next_veriant) => {
                         ( async () => {

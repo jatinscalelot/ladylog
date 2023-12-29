@@ -10,17 +10,13 @@ let schema = new mongoose.Schema({
     type: String,
     require: true
   },
-  original_price: {
+  no_of_cycle: {
     type: Number,
     require: true
   },
   discount_per: {
     type: Number,
     default: 0
-  },
-  discounted_price: {
-    type: Number,
-    require: true
   },
   description: {
     type: String,
