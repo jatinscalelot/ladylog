@@ -69,7 +69,7 @@ const userpaths = [
   { pathUrl: '/order', routerFile: 'order' },
   { pathUrl: '/review', routerFile: 'review' },
   { pathUrl: '/reminder', routerFile: 'reminder' },
-  { pathUrl: '/subscriber', routerFile: 'subscriber' },
+  { pathUrl: '/subscribe', routerFile: 'subscribe' },
 ];
 userpaths.forEach((path) => {
   app.use('/user' + path.pathUrl, require('./routes/users/' + path.routerFile));
@@ -94,5 +94,8 @@ app.use(function(err, req, res, next) {
 // Please do not remove following two line of code...
 // console.log(helper.addDaysToTimestamp(1683504000000 , 28-1));
 // console.log(helper.addDaysToTimestamp(1703246340000 , 5-1));
+
+// let token = helper.generateAccessToken({_id: '658d501d1584632fa7587d05'});
+// console.log('token :',token);
 
 module.exports = app;

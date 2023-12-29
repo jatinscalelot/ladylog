@@ -8,7 +8,7 @@ const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const userModel = require('../../models/users/users.model');
 const mycycleModel = require('../../models/users/mycycle.model');
-const subscriberModel = require('../../models/users/subscriber.model');
+const subscribeModel = require('../../models/users/subscribe.model');
 const planModel = require('../../models/admin/plan.model');
 
 // function getTimestampsBetweenDates(startTimestamp, endTimestamp) {
@@ -47,15 +47,11 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     last_next_cycle_data = await primary.model(constants.MODELS.mycycles, mycycleModel).find({createdBy: userData._id}).select('_id period_start_date_timestamp period_end_date_timestamp').sort({period_start_date_timestamp: -1}).limit(2).lean();
                 }
                 if(userData.is_subscriber === true){
-                    let subscriberData = await primary.model(constants.MODELS.subscribers, subscriberModel).findById(userData.active_subscriber_plan).populate({
-                        path: 'plan',
-                        model: primary.model(constants.MODELS.plans, planModel),
-                        select: 'plan_type'
-                    }).lean();
+                    let subscribeData = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(userData.active_subscriber_plan).lean()
                     let data = {
                         period_days: parseInt(userData.period_days),
                         cycle_length: parseInt(userData.cycle),
-                        plan_type: subscriberData.plan.plan_type,
+                        plan_type: subscribeData.plan.plan_type,
                         nextCycle: {
                             period_start_date: last_next_cycle_data[0].period_start_date_timestamp,
                             period_end_date: last_next_cycle_data[0].period_end_date_timestamp

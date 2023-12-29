@@ -22,7 +22,7 @@ let constants = {
         reminders: 'reminders',
         staffies: 'staffies',
         plans: 'plans',
-        subscribers: 'subscribers',
+        subscribes: 'subscribes',
         settings: 'settings'
     }
 };
