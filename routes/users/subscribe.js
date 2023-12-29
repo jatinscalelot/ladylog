@@ -46,6 +46,7 @@ router.post('/plans' , helper.authenticateToken , async (req , res) => {
                     plan.discount = parseFloat(discount.toFixed(2));
                     plan.discounted_amount = parseFloat(discounted_amount.toFixed(2));
                     plan.size = sizeData;
+                    plan.address = new mongoose.Types.ObjectId(addressData._id);
                     next_plan();
                   }, () => {
                     return responseManager.onSuccess('Plans details...!' , plans , res);
