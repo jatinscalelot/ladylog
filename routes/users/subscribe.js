@@ -20,7 +20,7 @@ router.post('/plans' , helper.authenticateToken , async (req , res) => {
     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
     if(userData && userData != null && userData.status === true){
       if(sizeId && sizeId.trim() != '' && mongoose.Types.ObjectId.isValid(sizeId)){
-        let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(sizeId).lean();
+        let sizeData = await primary.model(constants.MODELS.sizemasters, sizeMasterModel).findById(sizeId).select('_id size_name status').lean();
         if(sizeData && sizeData != null && sizeData.status === true){
           if(quantity && Number.isInteger(quantity) && quantity > 0){
             if(addressId && addressId.trim() != '' && mongoose.Types.ObjectId.isValid(addressId)){
@@ -45,6 +45,7 @@ router.post('/plans' , helper.authenticateToken , async (req , res) => {
                     plan.original_amount = parseFloat(original_amount.toFixed(2));
                     plan.discount = parseFloat(discount.toFixed(2));
                     plan.discounted_amount = parseFloat(discounted_amount.toFixed(2));
+                    plan.size = sizeData;
                     next_plan();
                   }, () => {
                     return responseManager.onSuccess('Plans details...!' , plans , res);
