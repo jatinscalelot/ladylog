@@ -291,6 +291,20 @@ router.post('/cancelOrders' ,  helper.authenticateToken , async (req , res) => {
                                             updatedAt: new Date()
                                         };
                                         let cancelledOrderData = await primary.model(constants.MODELS.orders, orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                        async.forEachSeries(orderData.veriants, (veriant , next_veriant) => {
+                                            ( async () => {
+                                                let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(veriant.veriant).lean();
+                                                let obj = {
+                                                    stock: parseInt(veriantData.stock + veriant.quantity)
+                                                };
+                                                let updatedVeriantData = await primary.model(constants.MODELS.veriants, veriantModel).findByIdAndUpdate(veriantData._id , obj , {returnOriginal: false}).lean();
+                                                next_veriant();
+                                            })().catch((error) => {
+                                                return responseManager.onError(error , res);
+                                            });
+                                        }, () => {
+                                            next_orderId();
+                                        });
                                     }else{
                                         let obj = {
                                             fullfill_status: 'cancelled',
@@ -300,8 +314,21 @@ router.post('/cancelOrders' ,  helper.authenticateToken , async (req , res) => {
                                             updatedAt: new Date()
                                         };
                                         let cancelledOrderData = await primary.model(constants.MODELS.orders, orderModel).findOneAndUpdate({orderId: orderData.orderId} , obj , {returnOriginal: false}).lean();
+                                        async.forEachSeries(orderData.veriants, (veriant , next_veriant) => {
+                                            ( async () => {
+                                                let veriantData = await primary.model(constants.MODELS.veriants, veriantModel).findById(veriant.veriant).lean();
+                                                let obj = {
+                                                    stock: parseInt(veriantData.stock + veriant.quantity)
+                                                };
+                                                let updatedVeriantData = await primary.model(constants.MODELS.veriants, veriantModel).findByIdAndUpdate(veriantData._id , obj , {returnOriginal: false}).lean();
+                                                next_veriant();
+                                            })().catch((error) => {
+                                                return responseManager.onError(error , res);
+                                            });
+                                        }, () => {
+                                            next_orderId();
+                                        });
                                     }
-                                    next_orderId();
                                 }else{
                                     if(orderData.fullfill_status === 'ready_to_ship'){
                                         return responseManager.badrequest({message: 'Order in ready to ship, You can not cancelled order now...!'}, res);
