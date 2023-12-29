@@ -21,6 +21,10 @@ let schema = new mongoose.Schema({
 		type: mongoose.Types.ObjectId,
 		default: null
 	},
+	active_plan_Id: {
+		type: mongoose.Types.ObjectId,
+		default: null
+	},
 	is_profile_completed: {
 		type: Boolean,
 		default: false

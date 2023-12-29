@@ -145,6 +145,7 @@ router.post('/buy' , helper.authenticateToken , async (req , res) => {
                       let userObj = {
                         is_subscriber: true,
                         active_subscriber_plan: new mongoose.Types.ObjectId(newSubscribePlan._id),
+                        active_plan_Id: new mongoose.Types.ObjectId(planData._id),
                         updatedBy: new mongoose.Types.ObjectId(userData._id),
                         updatedAt: new Date()
                       };
