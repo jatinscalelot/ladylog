@@ -284,6 +284,7 @@ router.post('/cancel' , helper.authenticateToken , async (req , res) => {
                                 fullfill_status: 'cancelled',
                                 financial_status: 'refund',
                                 cancelledAt: new Date(),
+                                cancelled_timestamp: Date.now(),
                                 updatedBy: new mongoose.Types.ObjectId(userData._id),
                                 updatedAt: new Date()
                             };
@@ -306,6 +307,7 @@ router.post('/cancel' , helper.authenticateToken , async (req , res) => {
                             let obj = {
                                 fullfill_status: 'cancelled',
                                 cancelledAt: new Date(),
+                                cancelled_timestamp: Date.now(),
                                 updatedBy: new mongoose.Types.ObjectId(userData._id),
                                 updatedAt: new Date()
                             };
