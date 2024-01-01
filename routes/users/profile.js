@@ -184,7 +184,7 @@ router.post('/editcyclelength' , helper.authenticateToken , async (req , res) =>
           if(cycle_length && Number.isInteger(cycle_length) && cycle_length >= 21 && cycle_length <= 100){
             let userObj = {
               cycle: parseInt(cycle_length),
-              updatedBy: new mongoose.Types.ObjectId.isValid(userData._id),
+              updatedBy: new mongoose.Types.ObjectId(userData._id),
               updatedAt: new Date()
             };
             let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , userObj , {returnOriginal: false}).lean();
@@ -222,7 +222,7 @@ router.post('/editperiodlength' , helper.authenticateToken , async (req , res) =
           if(period_days && Number.isInteger(period_days) && period_days >= 1 && period_days <= 7 ){
             let userObj = {
               period_days: parseInt(period_days),
-              updatedBy: new mongoose.Types.ObjectId.isValid(userData._id),
+              updatedBy: new mongoose.Types.ObjectId(userData._id),
               updatedAt: new Date()
             };
             let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , userObj , {returnOriginal: false}).lean();
