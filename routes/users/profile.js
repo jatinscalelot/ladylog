@@ -156,18 +156,14 @@ router.post('/update' , helper.authenticateToken , async (req , res) => {
         let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
         if(userData && userData != null && userData.status === true){
             if(name && name.trim() != ''){
-                if(email && email.trim() != '' && /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)){
-                    let obj = {
-                        name: name.trim(),
-                        email: email.trim(),
-                        updatedBy: new mongoose.Types.ObjectId(userData._id),
-                        updatedAt: new Date()
-                    };
-                    let updatedUserData = await primary.model(constants.MODELS.users , userModel).findByIdAndUpdate(userData._id , obj , {returnOriginal: false}).lean();
-                    return responseManager.onSuccess('Profile data updated successfully...!' , 1 , res);
-                }else{
-                    return responseManager.badrequest({message: 'Invalid email...!'}, res);
-                }
+                let obj = {
+                    name: name.trim(),
+                    email: (email && email.trim() != '' && /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) ? email.trim() : '',
+                    updatedBy: new mongoose.Types.ObjectId(userData._id),
+                    updatedAt: new Date()
+                };
+                let updatedUserData = await primary.model(constants.MODELS.users , userModel).findByIdAndUpdate(userData._id , obj , {returnOriginal: false}).lean();
+                return responseManager.onSuccess('Profile data updated successfully...!' , 1 , res);
             }else{
                 return responseManager.badrequest({message: 'Please enter your name...!'}, res);
             }
