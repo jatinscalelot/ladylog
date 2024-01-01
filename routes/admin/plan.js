@@ -10,27 +10,32 @@ const adminModel = require('../../models/admin/admin.model');
 const planModel = require('../../models/admin/plan.model');
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
-  const {page , limit , search} = req.body;
+  const {page , limit , search , is_pagination} = req.body;
   if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
     if(adminData && adminData != null){
-      primary.model(constants.MODELS.plans , planModel).paginate({
-        $or: [
-          {plan_type: {$regex: search, $options: 'i'}},
-          {plan_name: {$regex: search, $options: 'i'}}
-        ]
-      }, {
-        page,
-        limit: parseInt(limit),
-        select: '-createdBy -updatedBy -createdAt -createdAt_timestamp -updatedAt -__v',
-        sort: {createdAt: -1},
-        lean: true
-      }).then((plans) => {
-        return responseManager.onSuccess('Plans data...!' , plans , res);
-      }).catch((error) => {
-        return responseManager.onError(error , res);
-      });
+      if(is_pagination === true){
+        primary.model(constants.MODELS.plans , planModel).paginate({
+          $or: [
+            {plan_type: {$regex: search, $options: 'i'}},
+            {plan_name: {$regex: search, $options: 'i'}}
+          ]
+        }, {
+          page,
+          limit: parseInt(limit),
+          select: '-createdBy -updatedBy -createdAt -createdAt_timestamp -updatedAt -__v',
+          sort: {createdAt: -1},
+          lean: true
+        }).then((plans) => {
+          return responseManager.onSuccess('Plans data...!' , plans , res);
+        }).catch((error) => {
+          return responseManager.onError(error , res);
+        });
+      }else{
+        let plans = await primary.model(constants.MODELS.plans, planModel).find({status: true}).select('-createdBy -updatedBy -createdAt -createdAt_timestamp -updatedAt -__v').lean();
+        return responseManager.onSuccess('All plans...!' , plans , res);
+      }
     }else{
       return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
     }
