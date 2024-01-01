@@ -11,6 +11,7 @@ var fs = require('fs');
 let mongoose = require("mongoose");
 var expressLayouts = require('express-ejs-layouts');
 const helper = require('./utilities/helper');
+const cron = require('node-cron');
 var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -91,6 +92,10 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+// cron.schedule('* * * * * *' , async () => {
+//   console.log('order placed successfully...!');
+// });
 
 // Please do not remove following two line of code...
 // console.log(helper.addDaysToTimestamp(1683504000000 , 28-1));

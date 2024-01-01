@@ -182,14 +182,63 @@ router.post('/editcyclelength' , helper.authenticateToken , async (req , res) =>
       let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
       if(userData && userData != null && userData.status === true){
           if(cycle_length && Number.isInteger(cycle_length) && cycle_length >= 21 && cycle_length <= 100){
-            let obj = {
+            let userObj = {
               cycle: parseInt(cycle_length),
               updatedBy: new mongoose.Types.ObjectId.isValid(userData._id),
               updatedAt: new Date()
             };
-            let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , obj , {returnOriginal: false}).lean();
+            let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , userObj , {returnOriginal: false}).lean();
             let last_next_cycle_data = await primary.model(constants.MODELS.mycycles, mycycleModel).find({createdBy: updatedUserData._id , status: true}).sort({period_start_date_timestamp: -1}).limit(2).lean();
+            let next_period_start_date = helper.addDaysToTimestamp(last_next_cycle_data[1].period_start_date_timestamp, userData.cycle - 1);
+            let next_period_end_date = helper.addDaysToTimestamp(next_period_start_date , userData.period_days - 1);
+            let nextCycleObj = {
+              period_start_date: new Date(next_period_start_date),
+              period_start_date_timestamp: next_period_start_date,
+              period_end_date: new Date(next_period_end_date),
+              period_end_date_timestamp: next_period_end_date,
+              status: true,
+              updatedBy: new mongoose.Types.ObjectId(updatedUserData._id),
+              updatedAt: new Date()
+          };
+          let updatedNextCycleData = await primary.model(constants.MODELS.mycycles, mycycleModel).findByIdAndUpdate(last_next_cycle_data[0]._id , nextCycleObj , {returnOriginal: false}).lean();
+          return responseManager.onSuccess('cycle length updated successfully...!' , 1 , res);
+          }else{
+            return responseManager.badrequest({message: 'Invalid cycle length...!'}, res);
+          }
+      }else{
+          return responseManager.badrequest({message: 'Invalid token to get user, please try again'}, res);
+      }
+  }else{
+      return responseManager.badrequest({message: 'Invalid token to get user, please try again'}, res);
+  }
+});
 
+router.post('/editperiodlength' , helper.authenticateToken , async (req , res) => {
+  const {period_days} = req.body;
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+      let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+      let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+      if(userData && userData != null && userData.status === true){
+          if(period_days && Number.isInteger(period_days) && period_days >= 1 && period_days <= 7 ){
+            let userObj = {
+              period_days: parseInt(period_days),
+              updatedBy: new mongoose.Types.ObjectId.isValid(userData._id),
+              updatedAt: new Date()
+            };
+            let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , userObj , {returnOriginal: false}).lean();
+            let last_next_cycle_data = await primary.model(constants.MODELS.mycycles, mycycleModel).find({createdBy: updatedUserData._id , status: true}).sort({period_start_date_timestamp: -1}).limit(2).lean();
+            let next_period_end_date = helper.addDaysToTimestamp(last_next_cycle_data[0].period_start_date_timestamp , userData.period_days - 1);
+            let nextCycleObj = {
+              period_start_date: new Date(last_next_cycle_data[0].period_start_date_timestamp),
+              period_start_date_timestamp: last_next_cycle_data[0].period_start_date_timestamp,
+              period_end_date: new Date(next_period_end_date),
+              period_end_date_timestamp: next_period_end_date,
+              status: true,
+              updatedBy: new mongoose.Types.ObjectId(updatedUserData._id),
+              updatedAt: new Date()
+          };
+          let updatedNextCycleData = await primary.model(constants.MODELS.mycycles, mycycleModel).findByIdAndUpdate(last_next_cycle_data[0]._id , nextCycleObj , {returnOriginal: false}).lean();
+          return responseManager.onSuccess('Period length updated successfully...!' , 1 , res);
           }else{
             return responseManager.badrequest({message: 'Invalid cycle length...!'}, res);
           }
