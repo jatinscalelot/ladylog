@@ -19,18 +19,8 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
         let userData = await primary.model(constants.MODELS.users , userModel).findById(req.token._id).lean();
         if(userData && userData != null && userData.status === true){
-            let pastCycleData = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id}).select('_id period_start_date_timestamp period_end_date_timestamp').sort({period_start_date_timestamp: -1}).limit(13).lean();
+            let pastCycleData = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: userData._id , status: true}).select('_id period_start_date_timestamp period_end_date_timestamp status').sort({period_start_date_timestamp: -1}).limit(13).lean();
             pastCycleData.reverse();
-            let period_start_date = pastCycleData[12].period_start_date_timestamp;
-            for(let i=0 ; i<12 ; i++){
-                period_start_date = helper.addDaysToTimestamp(period_start_date , userData.cycle - 1);
-                let period_end_date = helper.addDaysToTimestamp(period_start_date , userData.period_days - 1);
-                let obj = {
-                    period_start_date_timestamp: period_start_date,
-                    period_end_date_timestamp: period_end_date
-                };
-                pastCycleData.push(obj);
-            }
             return responseManager.onSuccess('cycles data...!' , pastCycleData , res);
         }else{
             return responseManager.badrequest({message: 'Invalid token to get user, Please try again...!'}, res);

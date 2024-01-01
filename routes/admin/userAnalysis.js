@@ -29,13 +29,17 @@ router.post('/analysis' , helper.authenticateToken , async (req , res) => {
         },{
             page,
             limit: parseInt(limit),
-            select: '_id name mobile email profile_pic is_subscriber active_subscriber_plan active_plan_Id',
+            select: '_id name mobile email profile_pic is_parent parentId is_subscriber active_subscriber_plan active_plan_Id',
             sort: {createdAt: -1},
             lean: true
         }).then((users) => {
             async.forEachSeries(users.docs, (user , next_user) => {
                 ( async () => {
                     const currentdate_timestamp = Date.now();
+                    if(user.is_parent === true){
+                        let no_of_childUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({parentId: user._id}));
+                        user.no_of_childUsers = parseInt(no_of_childUsers);
+                    }
                     let last_next_cycle_data = await primary.model(constants.MODELS.mycycles , mycycleModel).find({createdBy: user._id}).sort({period_start_date_timestamp: -1}).limit(2).lean();
                     let no_of_order = parseInt(await primary.model(constants.MODELS.orders, orderModel).countDocuments({createdBy: user._id , fullfill_status: 'delivered'}));
                     user.no_of_order = parseInt(no_of_order);

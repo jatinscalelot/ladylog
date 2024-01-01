@@ -41,6 +41,7 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                         period_start_date_timestamp: next_period_start_date,
                         period_end_date: new Date(next_period_end_date),
                         period_end_date_timestamp: next_period_end_date,
+                        status: true,
                         createdBy: new mongoose.Types.ObjectId(userData._id)
                     };
                     let nextCycleData = await primary.model(constants.MODELS.mycycles, mycycleModel).create(nextCycleObj);

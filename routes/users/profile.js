@@ -90,6 +90,7 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                               period_start_date_timestamp: next_period_start_date,
                               period_end_date: new Date(next_period_end_date),
                               period_end_date_timestamp: next_period_end_date,
+                              status: true,
                               createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
                           };
                           let nextCycle = await primary.model(constants.MODELS.mycycles, mycycleModel).create(nextCycleObj);
@@ -98,6 +99,7 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                               period_start_date_timestamp: last_period_start_date,
                               period_end_date: new Date(last_period_end_date),
                               period_end_date_timestamp: last_period_end_date,
+                              status: true,
                               createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
                           };
                           let previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(previousCycleObj);
@@ -109,6 +111,7 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                               period_start_date_timestamp: period_start_date_timestamp,
                               period_end_date: new Date(period_end_date_timestamp),
                               period_end_date_timestamp: period_end_date_timestamp,
+                              status: true,
                               createdBy: new mongoose.Types.ObjectId(updatedUserData._id)
                             };
                             previousCycle = await primary.model(constants.MODELS.mycycles , mycycleModel).create(newPreviousCycleObj);
