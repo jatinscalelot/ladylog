@@ -14,7 +14,13 @@ const async = require('async');
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            return responseManager.onSuccess('success...!' , 1 , res);
+        }else{
+            return responseManager.badrequest({message: 'Invlid token to get admin, Please try again...!'}, res);
+        }
     }else{
         return responseManager.badrequest({message: 'Invlid token to get admin, Please try again...!'}, res);
     }

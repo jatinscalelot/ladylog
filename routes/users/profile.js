@@ -175,6 +175,32 @@ router.post('/update' , helper.authenticateToken , async (req , res) => {
     }
 });
 
+router.post('/editcyclelength' , helper.authenticateToken , async (req , res) => {
+  const {cycle_length} = req.body;
+  if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+      let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+      let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+      if(userData && userData != null && userData.status === true){
+          if(cycle_length && Number.isInteger(cycle_length) && cycle_length >= 21 && cycle_length <= 100){
+            let obj = {
+              cycle: parseInt(cycle_length),
+              updatedBy: new mongoose.Types.ObjectId.isValid(userData._id),
+              updatedAt: new Date()
+            };
+            let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id , obj , {returnOriginal: false}).lean();
+            let last_next_cycle_data = await primary.model(constants.MODELS.mycycles, mycycleModel).find({createdBy: updatedUserData._id , status: true}).sort({period_start_date_timestamp: -1}).limit(2).lean();
+
+          }else{
+            return responseManager.badrequest({message: 'Invalid cycle length...!'}, res);
+          }
+      }else{
+          return responseManager.badrequest({message: 'Invalid token to get user, please try again'}, res);
+      }
+  }else{
+      return responseManager.badrequest({message: 'Invalid token to get user, please try again'}, res);
+  }
+});
+
 router.post('/uploadpicture' , helper.authenticateToken , upload.single('profile_pic')  , async (req , res) => {
     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
       let primary = mongoConnection.useDb(constants.DEFAULT_DB);

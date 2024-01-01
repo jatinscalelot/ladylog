@@ -9,7 +9,6 @@ const helper = require('../../utilities/helper');
 const userModel = require('../../models/users/users.model');
 const mycycleModel = require('../../models/users/mycycle.model');
 const subscribeModel = require('../../models/users/subscribe.model');
-const planModel = require('../../models/admin/plan.model');
 
 // function getTimestampsBetweenDates(startTimestamp, endTimestamp) {
 //     const timestamps = [];
@@ -67,7 +66,6 @@ router.get('/' , helper.authenticateToken , async (req , res) => {
                     let data = {
                         period_days: parseInt(userData.period_days),
                         cycle_length: parseInt(userData.cycle),
-                        plan_type: 'free',
                         nextCycle: {
                             period_start_date: last_next_cycle_data[0].period_start_date_timestamp,
                             period_end_date: last_next_cycle_data[0].period_end_date_timestamp

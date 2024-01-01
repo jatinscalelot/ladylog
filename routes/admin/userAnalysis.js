@@ -62,8 +62,6 @@ router.post('/analysis' , helper.authenticateToken , async (req , res) => {
                         if( user.is_subscriber === true){
                             let subscribeData = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(user.active_subscriber_plan).lean();
                             user.current_plan = subscribeData.plan.plan_type;
-                        }else{
-                            user.current_plan = 'free';
                         }
                         next_user();
                     })().catch((error) => {
@@ -95,8 +93,6 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                     if(userData.is_parent === true){
                         if(userData.is_subscriber === true){
                             userData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(userData.active_subscriber_plan).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
-                        }else{
-                            userData.current_plan = 'free';
                         }
                         userData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: userData._id , active: false}).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
                         userData.orders = await primary.model(constants.MODELS.orders, orderModel).find({createdBy: userData._id}).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').sort({orderAt_timestamp: -1}).limit(5).lean();
@@ -106,8 +102,6 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                             ( async () => {
                                 if(childUser.is_subscriber === true){
                                     childUser.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(childUser.active_subscriber_plan).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean()
-                                }else{
-                                    childUser.current_plan = 'free';
                                 }
                                 childUser.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: childUser._id , active: false}).sort({buyAt_timestamp: -1}).limit(5).lean();
                                 childUser.orders = await primary.model(constants.MODELS.orders, orderModel).find({createdBy: childUser._id}).sort({orderAt_timestamp: -1}).limit(5).lean();
@@ -123,8 +117,6 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                         let parentData = await primary.model(constants.MODELS.users, userModel).findById(userData.parentId).select('_id mobile email profile_pic is_subscriber active_subscriber_plan is_parent parentId cycle dob goal name period_days active_plan_Id status').lean();
                         if(parentData.is_subscriber === true){
                             parentData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(parentData.active_subscriber_plan).select('-status -updatedBy -createdAt -updatedAt -__v').lean();
-                        }else{
-                            parentData.current_plan = 'free';
                         }
                         parentData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: parentData._id , active: false}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
                         parentData.orders = await primary.model(constants.MODELS.orders, orderModel).find({createdBy: parentData._id}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({orderAt_timestamp: -1}).limit(5).lean();
@@ -134,8 +126,6 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                             ( async () => {
                                 if(childUser.is_subscriber === true){
                                     childUser.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(childUser.active_subscriber_plan).select('-status -updatedBy -createdAt -updatedAt -__v').lean()
-                                }else{
-                                    childUser.current_plan = 'free';
                                 }
                                 childUser.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: childUser._id , active: false}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
                                 childUser.orders = await primary.model(constants.MODELS.orders, orderModel).find({createdBy: childUser._id}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({orderAt_timestamp: -1}).limit(5).lean();
