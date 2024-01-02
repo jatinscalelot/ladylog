@@ -18,6 +18,12 @@ let planSchema = new mongoose.Schema({
     require: true
   }
 }, {_id: false}); 
+let deliveryDateSchema = new mongoose.Schema({
+  delivery_date: {
+    type: Date,
+    require: true
+  }
+})
 let schema = new mongoose.Schema({
   paymentId: {
     type: String,
@@ -60,6 +66,7 @@ let schema = new mongoose.Schema({
     type: Number,
     require: true
   },
+  delivery_dates: [],
   active: {
     type: Boolean,
     default: true
