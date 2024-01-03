@@ -22,8 +22,20 @@ let deliveryDateSchema = new mongoose.Schema({
   delivery_date: {
     type: Date,
     require: true
+  },
+  delivery_timestamp: {
+    type: Number,
+    require: true,
+  },
+  orderId: {
+    type: String,
+    default: ''
+  },
+  delivered: {
+    type: Boolean,
+    default: false
   }
-})
+});
 let schema = new mongoose.Schema({
   paymentId: {
     type: String,
@@ -66,7 +78,7 @@ let schema = new mongoose.Schema({
     type: Number,
     require: true
   },
-  delivery_dates: [],
+  delivery_dates: [deliveryDateSchema],
   active: {
     type: Boolean,
     default: true

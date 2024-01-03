@@ -49,7 +49,6 @@ router.post('/plans', helper.authenticateToken, async (req, res) => {
                       plan.discounted_amount = parseFloat(discounted_amount.toFixed(2));
                       plan.size = sizeData;
                       plan.address = new mongoose.Types.ObjectId(addressData._id);
-
                       let cycle_array = [];
                       let no_of_cycle = parseInt(plan.no_of_cycle);
                       for (let i = 0; i < no_of_cycle; i++) {
@@ -127,7 +126,7 @@ router.get('/sizes', helper.authenticateToken, async (req, res) => {
 });
 
 router.post('/buy', helper.authenticateToken, async (req, res) => {
-  const { paymentId, planId, quantity, sizeId, addressId } = req.body;
+  const { paymentId, planId, quantity, date , sizeId, addressId } = req.body;
   if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
@@ -143,49 +142,119 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
                   if (addressId && addressId.trim() != '' && mongoose.Types.ObjectId.isValid(addressId)) {
                     let addressData = await primary.model(constants.MODELS.addresses, addressModel).findOne({ _id: new mongoose.Types.ObjectId(addressId), createdBy: new mongoose.Types.ObjectId(userData._id) }).lean();
                     if (addressData && addressData != null && addressData.status === true) {
-                      let per_cycle_quantity = parseInt(quantity);
-                      let total_quantity = parseInt(per_cycle_quantity * planData.no_of_cycle);
-                      let pad_price = 5;
-                      let original_amount = parseFloat((total_quantity * pad_price).toFixed(2));
-                      let discount = 0;
-                      let discounted_amount = 0;
-                      if (planData.discount_per && planData.discount_per > 0) {
-                        discount = parseFloat(parseFloat(parseFloat(parseFloat(original_amount) * parseFloat(planData.discount_per)) / 100).toFixed(2));
-                        discounted_amount = parseFloat((original_amount - discount).toFixed(2));
-                      } else {
-                        discounted_amount = parseFloat(original_amount.toFixed(2));
+                      if(date && Number.isInteger(date) && date >= 1 && date <= 28){
+                        let no_of_cycle = parseInt(planData.no_of_cycle);
+                        // let no_of_cycle = 35;
+                        let per_cycle_quantity = parseInt(quantity);
+                        let total_quantity = parseInt(per_cycle_quantity * no_of_cycle);
+                        let pad_price = 5;
+                        let original_amount = parseFloat((total_quantity * pad_price).toFixed(2));
+                        let discount = 0;
+                        let discounted_amount = 0;
+                        if (planData.discount_per && planData.discount_per > 0) {
+                          discount = parseFloat(parseFloat(parseFloat(parseFloat(original_amount) * parseFloat(planData.discount_per)) / 100).toFixed(2));
+                          discounted_amount = parseFloat((original_amount - discount).toFixed(2));
+                        } else {
+                          discounted_amount = parseFloat(original_amount.toFixed(2));
+                        }
+                        let currentDate = new Date();
+                        let x = currentDate.getFullYear() + '-' + (currentDate.getMonth() <= 9 ? '0' : '') + (parseInt(parseInt(currentDate.getMonth()) + 1)) + '-' + (date <= 9 ? '0' : '') + date + 'T00:00:00.000Z';
+                        let dateObj = new Date(x);
+                        let Difference_In_Time = dateObj.getTime() - currentDate.getTime();
+                        let Difference_In_Days = Math.round(Difference_In_Time / (1000 * 3600 * 24));
+                        if(Difference_In_Days >= 1){
+                          Difference_In_Days = Difference_In_Days + 2;
+                        }
+                        let delivery_dates = [];
+                        if(Difference_In_Days >= 10){
+                          let obj = {
+                            delivery_date: dateObj,
+                            delivery_timestamp: dateObj.getTime(),
+                          };
+                          delivery_dates.push(obj);
+                        }else{
+                          let nextDateObj = new Date(dateObj.getFullYear() , dateObj.getMonth() + 1 , date , 0 , 0);
+                          let nextDateTimestamp = parseInt(nextDateObj.getTime() + 19800000);
+                          let nextDate = new Date(nextDateTimestamp);
+                          let obj = {
+                            delivery_date: nextDate,
+                            delivery_timestamp: nextDateTimestamp,
+                          };
+                          delivery_dates.push(obj);
+                        }
+                        let cycle_array = [];
+                        for (let i = 0; i < no_of_cycle - 1; i++) {
+                          let obj = {
+                            cycle_no: i
+                          };
+                          cycle_array.push(obj);
+                        }
+                        async.forEachSeries(cycle_array, (cycle , next_cycle) => {
+                          if (Difference_In_Days >= 10) {
+                            let length_of_delivery_dates = delivery_dates.length;
+                            let lastDateObj = delivery_dates[length_of_delivery_dates - 1].delivery_date;
+                            let nextDateObj = new Date(lastDateObj.getFullYear() , lastDateObj.getMonth() + 1 , date , 0 , 0);
+                            let nextDateTimestamp = parseInt(nextDateObj.getTime() + 19800000);
+                            let nextDate = new Date(nextDateTimestamp);
+                            let obj = {
+                              delivery_date: nextDate,
+                              delivery_timestamp: nextDateTimestamp,
+                            };
+                            delivery_dates.push(obj);
+                          } else {
+                            let length_of_delivery_dates = delivery_dates.length;
+                            let lastDateObj = delivery_dates[length_of_delivery_dates - 1].delivery_date;
+                            let nextDateObj = new Date(lastDateObj.getFullYear() , lastDateObj.getMonth() + 1 , date , 0 , 0);
+                            let nextDateTimestamp = parseInt(nextDateObj.getTime() + 19800000);
+                            let nextDate = new Date(nextDateTimestamp);
+                            let obj = {
+                              delivery_date: nextDate,
+                              delivery_timestamp: nextDateTimestamp,
+                            };
+                            delivery_dates.push(obj);
+                          }
+                          next_cycle();
+                        }, () => {
+                          ( async () => {
+                            let subscribePlanObj = {
+                              paymentId: paymentId.trim(),
+                              plan: {
+                                planId: new mongoose.Types.ObjectId(planData._id),
+                                plan_type: planData.plan_type,
+                                no_of_cycle: parseInt(planData.no_of_cycle),
+                                discount_per: parseFloat(planData.discount_per.toFixed(2))
+                              },
+                              per_cycle_quantity: parseInt(per_cycle_quantity),
+                              total_quantity: parseInt(total_quantity),
+                              original_amount: parseFloat(original_amount.toFixed(2)),
+                              discount: parseFloat(discount.toFixed(2)),
+                              discounted_amount: parseFloat(discounted_amount.toFixed(2)),
+                              size: new mongoose.Types.ObjectId(sizeData._id),
+                              address: new mongoose.Types.ObjectId(addressData._id),
+                              remaining_cycle: parseInt(planData.no_of_cycle),
+                              delivery_dates: delivery_dates,
+                              active: true,
+                              buyAt: new Date(),
+                              buyAt_timestamp: parseInt(Date.now()),
+                              createdBy: new mongoose.Types.ObjectId(userData._id)
+                            };
+                            let newSubscribePlan = await primary.model(constants.MODELS.subscribes, subscribeModel).create(subscribePlanObj);
+                            let userObj = {
+                              is_subscriber: true,
+                              active_subscriber_plan: new mongoose.Types.ObjectId(newSubscribePlan._id),
+                              active_plan_Id: new mongoose.Types.ObjectId(planData._id),
+                              updatedBy: new mongoose.Types.ObjectId(userData._id),
+                              updatedAt: new Date()
+                            };
+                            let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id, userObj, { returnOriginal: false }).lean();
+                            return responseManager.onSuccess('subscribe successfully...!', 1, res);
+                          })().catch((error) => {
+                            return responseManager.onError(error , res);
+                          });
+                        });
+                      }else{
+                        return responseManager.badrequest({message: 'Invalid date...!'}, res);
                       }
-                      let subscribePlanObj = {
-                        paymentId: paymentId.trim(),
-                        plan: {
-                          planId: new mongoose.Types.ObjectId(planData._id),
-                          plan_type: planData.plan_type,
-                          no_of_cycle: parseInt(planData.no_of_cycle),
-                          discount_per: parseFloat(planData.discount_per.toFixed(2))
-                        },
-                        per_cycle_quantity: parseInt(per_cycle_quantity),
-                        total_quantity: parseInt(total_quantity),
-                        original_amount: parseFloat(original_amount.toFixed(2)),
-                        discount: parseFloat(discount.toFixed(2)),
-                        discounted_amount: parseFloat(discounted_amount.toFixed(2)),
-                        size: new mongoose.Types.ObjectId(sizeData._id),
-                        address: new mongoose.Types.ObjectId(addressData._id),
-                        remaining_cycle: parseInt(planData.no_of_cycle),
-                        active: true,
-                        buyAt: new Date(),
-                        buyAt_timestamp: parseInt(Date.now()),
-                        createdBy: new mongoose.Types.ObjectId(userData._id)
-                      };
-                      let newSubscribePlan = await primary.model(constants.MODELS.subscribes, subscribeModel).create(subscribePlanObj);
-                      let userObj = {
-                        is_subscriber: true,
-                        active_subscriber_plan: new mongoose.Types.ObjectId(newSubscribePlan._id),
-                        active_plan_Id: new mongoose.Types.ObjectId(planData._id),
-                        updatedBy: new mongoose.Types.ObjectId(userData._id),
-                        updatedAt: new Date()
-                      };
-                      let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id, userObj, { returnOriginal: false }).lean();
-                      return responseManager.onSuccess('subscribe successfully...!', 1, res);
                     } else {
                       return responseManager.badrequest({ message: 'Invalid id to get address...!' }, res);
                     }
