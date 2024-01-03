@@ -95,48 +95,20 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                             userData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(userData.active_subscriber_plan).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
                         }
                         userData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: userData._id , active: false}).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
-                        userData.orders = await primary.model(constants.MODELS.orders, orderModel).find({createdBy: userData._id}).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').sort({orderAt_timestamp: -1}).limit(5).lean();
-                        let childUsers = await primary.model(constants.MODELS.users, userModel).find({parentId: userData._id}).select('_id mobile email profile_pic is_subscriber active_subscriber_plan is_parent parentId cycle dob goal name period_days active_plan_Id status').lean();
-                        userData.no_of_childUsers = parseInt(childUsers.length);
-                        async.forEachSeries(childUsers, (childUser , next_childUser) => {
-                            ( async () => {
-                                if(childUser.is_subscriber === true){
-                                    childUser.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(childUser.active_subscriber_plan).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean()
-                                }
-                                childUser.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: childUser._id , active: false}).sort({buyAt_timestamp: -1}).limit(5).lean();
-                                childUser.orders = await primary.model(constants.MODELS.orders, orderModel).find({createdBy: childUser._id}).sort({orderAt_timestamp: -1}).limit(5).lean();
-                                next_childUser();
-                            })().catch((error) => {
-                                return responseManager.onError(error , res);
-                            });
-                        }, () => {
-                            userData.childUsers = childUsers;
-                            return responseManager.onSuccess('User details' , userData , res);
-                        });
+                        userData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: userData._id}));
+                        return responseManager.onSuccess('User details' , userData , res);
                     }else{
                         let parentData = await primary.model(constants.MODELS.users, userModel).findById(userData.parentId).select('_id mobile email profile_pic is_subscriber active_subscriber_plan is_parent parentId cycle dob goal name period_days active_plan_Id status').lean();
-                        if(parentData.is_subscriber === true){
-                            parentData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(parentData.active_subscriber_plan).select('-status -updatedBy -createdAt -updatedAt -__v').lean();
-                        }
-                        parentData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: parentData._id , active: false}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
-                        parentData.orders = await primary.model(constants.MODELS.orders, orderModel).find({createdBy: parentData._id}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({orderAt_timestamp: -1}).limit(5).lean();
-                        let childUsers = await primary.model(constants.MODELS.users, userModel).find({parentId: parentData._id}).select('_id mobile email profile_pic is_subscriber active_subscriber_plan is_parent parentId cycle dob goal name period_days active_plan_Id status').lean();
-                        parentData.no_of_childUsers = parseInt(childUsers.length);
-                        async.forEachSeries(childUsers, (childUser , next_childUser) => {
-                            ( async () => {
-                                if(childUser.is_subscriber === true){
-                                    childUser.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(childUser.active_subscriber_plan).select('-status -updatedBy -createdAt -updatedAt -__v').lean()
-                                }
-                                childUser.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: childUser._id , active: false}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
-                                childUser.orders = await primary.model(constants.MODELS.orders, orderModel).find({createdBy: childUser._id}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({orderAt_timestamp: -1}).limit(5).lean();
-                                next_childUser();
-                            })().catch((error) => {
-                                return responseManager.onError(error , res);
-                            });
-                        }, () => {
-                            parentData.childUsers = childUsers;
+                        if(parentData && parentData != null){
+                            if(parentData.is_subscriber === true){
+                                parentData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(parentData.active_subscriber_plan).select('-status -updatedBy -createdAt -updatedAt -__v').lean();
+                            }
+                            parentData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: parentData._id , active: false}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
+                            parentData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: parentData._id}));
                             return responseManager.onSuccess('User details' , parentData , res);
-                        });
+                        }else{
+                            return responseManager.badrequest({message: 'Parent user not found...!'}, res);
+                        }
                     }
                 }else{
                     return responseManager.badrequest({message: 'Invalid id to get user, Please try again...!'}, res);
@@ -146,6 +118,62 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
             }
         }else{
             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
+
+router.post('/getchildusers' , helper.authenticateToken , async (req , res) => {
+    const {parentId , page , limit , search} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            if(parentId && parentId.trim() != '' && mongoose.Types.ObjectId.isValid(parentId)){
+                let parentUserData = await primary.model(constants.MODELS.users, userModel).findById(parentId).lean();
+                console.log('parentUserData :',parentUserData);
+                if(parentUserData && parentUserData != null && parentUserData.is_parent === true){
+                    primary.model(constants.MODELS.users, userModel).paginate({
+                        $or: [
+                            {name: {$regex: search, $options: 'i'}},
+                            {mobile: {$regex: search, $options: 'i'}},
+                            {email: {$regex: search, $options: 'i'}},
+                        ],
+                        is_parent: false,
+                        parentId: parentUserData._id
+                    }, {
+                        page,
+                        limit: parseInt(limit),
+                        select: '_id name mobile email profile_pic is_parent parentId is_subscriber active_subscriber_plan cycle period_days status createdAt',
+                        populate: {path: 'active_subscriber_plan' , model: primary.model(constants.MODELS.subscribes, subscribeModel) , select: '_id paymentId plan original_amount discount discounted_amount remaining_cycle active buyAt buyAt_timestamp'},
+                        sort: {createdAt: -1},
+                        lean: true
+                    }).then((childUsers) => {
+                        async.forEachSeries(childUsers.docs, (childUser , next_childUser) => {
+                            ( async () => {
+                                let total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: childUser._id}));
+                                childUser.total_plans = parseInt(total_plans);
+                                let previous_plans = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: childUser._id , active: false}).sort({buyAt_timestamp: -1}).select('_id paymentId plan original_amount discount discounted_amount remaining_cycle active buyAt buyAt_timestamp createdBy').limit(5).lean();
+                                childUser.previous_plans = previous_plans;
+                                next_childUser();
+                            })().catch((error) => {
+                                return responseManager.onError(error , res);
+                            });
+                        }, () => {
+                            return responseManager.onSuccess('Child users details...!' , childUsers , res);
+                        });
+                    }).catch((error) => {
+                        return responseManager.onError(error , res);
+                    });
+                }else{
+                    return responseManager.badrequest({message: 'Invalid id to get parent user...!'}, res);
+                }
+            }else{
+                return responseManager.badrequest({message: 'Invalid id to get parent user...!'}, res);
+            }
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res); 
         }
     }else{
         return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
