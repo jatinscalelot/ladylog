@@ -49,6 +49,7 @@ router.post('/plans', helper.authenticateToken, async (req, res) => {
                       plan.discounted_amount = parseFloat(discounted_amount.toFixed(2));
                       plan.size = sizeData;
                       plan.address = new mongoose.Types.ObjectId(addressData._id);
+                      plan.date = parseInt(date);
                       let cycle_array = [];
                       let no_of_cycle = parseInt(plan.no_of_cycle);
                       for (let i = 0; i < no_of_cycle; i++) {
