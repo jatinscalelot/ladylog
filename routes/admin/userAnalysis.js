@@ -95,7 +95,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                             userData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(userData.active_subscriber_plan).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
                         }
                         userData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: userData._id , active: false}).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
-                        userData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: userData._id}));
+                        userData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: userData._id , active: false}));
                         let no_of_childUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({parentId: userData._id}));
                         userData.no_of_childUsers = parseInt(no_of_childUsers);
                         return responseManager.onSuccess('User details' , userData , res);
@@ -106,7 +106,7 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                                 parentData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(parentData.active_subscriber_plan).select('-status -updatedBy -createdAt -updatedAt -__v').lean();
                             }
                             parentData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: parentData._id , active: false}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
-                            parentData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: parentData._id}));
+                            parentData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: parentData._id , active: false}));
                             let no_of_childUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({parentId: parentData._id}));
                             userData.no_of_childUsers = parseInt(no_of_childUsers);
                             return responseManager.onSuccess('User details' , parentData , res);
@@ -155,7 +155,7 @@ router.post('/getchildusers' , helper.authenticateToken , async (req , res) => {
                     }).then((childUsers) => {
                         async.forEachSeries(childUsers.docs, (childUser , next_childUser) => {
                             ( async () => {
-                                let total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: childUser._id}));
+                                let total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: childUser._id , active: false}));
                                 childUser.total_plans = parseInt(total_plans);
                                 let previous_plans = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: childUser._id , active: false}).sort({buyAt_timestamp: -1}).select('_id paymentId plan original_amount discount discounted_amount remaining_cycle active buyAt buyAt_timestamp createdBy').limit(5).lean();
                                 childUser.previous_plans = previous_plans;
@@ -183,23 +183,77 @@ router.post('/getchildusers' , helper.authenticateToken , async (req , res) => {
     }
 });
 
-// router.post('/orderhistory' , helper.authenticateToken , async (req , res) => {
-//     const {parentId , page , limit , search} = req.body;
-//     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
-//         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-//         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
-//         if(adminData && adminData != null){
-//             if(parentId && parentId.trim() != '' && mongoose.Types.ObjectId.isValid(parentId)){
-//                 let parentUserData = await primary.model(constants.MODELS.users, userModel).findById(parentId).lean();
-//             }else{
-//                 return responseManager.badrequest({message: 'Invalid id to get parent user...!'}, res); 
-//             }
-//         }else{
-//             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-//         }
-//     }else{
-//         return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
-//     }
-// });
+router.post('/orderhistory' , helper.authenticateToken , async (req , res) => {
+    const {parentId , page , limit , search} = req.body;
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            if(parentId && parentId.trim() != '' && mongoose.Types.ObjectId.isValid(parentId)){
+                let parentUserData = await primary.model(constants.MODELS.users, userModel).findById(parentId).lean();
+                if(parentUserData && parentUserData != null && parentUserData.is_parent === true){
+                    let ids = [new mongoose.Types.ObjectId(parentUserData._id)];
+                    let childUsers = await primary.model(constants.MODELS.users, userModel).find({parentId: parentUserData._id}).select('_id parentId').lean();
+                    if(childUsers && childUsers.length > 0){
+                        async.forEachSeries(childUsers, (childUser , next_childUser) => {
+                            ids.push(new mongoose.Types.ObjectId(childUser._id));
+                            next_childUser();
+                        }, () => {
+                            primary.model(constants.MODELS.orders, orderModel).paginate({
+                                $or: [
+                                    {orderId: {$regex: search, $options: 'i'}},
+                                    {fullfill_status: {$regex: search, $options: 'i'}},
+                                    {financial_status: {$regex: search, $options: 'i'}},
+                                    {payment_type: {$regex: search, $options: 'i'}}
+                                ],
+                                createdBy: {$in: ids}
+                            }, {
+                                page,
+                                limit: parseInt(limit),
+                                select: '-veriants -addressId -is_download -status -updatedBy -createdAt -updatedAt -__v',
+                                populate: {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id name mobile email is_parent'},
+                                sort: {orderAt_timestamp: -1},
+                                lean: true
+                            }).then((orders) => {
+                                return responseManager.onSuccess('Order history...!' , orders , res);
+                            }).catch((error) => {
+                                return responseManager.onError(error , res);
+                            });
+                        });
+                    }else{
+                        primary.model(constants.MODELS.orders, orderModel).paginate({
+                            $or: [
+                                {orderId: {$regex: search, $options: 'i'}},
+                                {fullfill_status: {$regex: search, $options: 'i'}},
+                                {financial_status: {$regex: search, $options: 'i'}},
+                                {payment_type: {$regex: search, $options: 'i'}}
+                            ],
+                            createdBy: {$in: ids}
+                        }, {
+                            page,
+                            limit: parseInt(limit),
+                            select: '-veriants -addressId -is_download -status -updatedBy -createdAt -updatedAt -__v',
+                            populate: {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id name mobile email is_parent'},
+                            sort: {orderAt_timestamp: -1},
+                            lean: true
+                        }).then((orders) => {
+                            return responseManager.onSuccess('Order history...!' , orders , res);
+                        }).catch((error) => {
+                            return responseManager.onError(error , res);
+                        });
+                    }
+                }else{
+                    return responseManager.badrequest({message: 'Invalid id to get parent user...!'}, res);
+                }
+            }else{
+                return responseManager.badrequest({message: 'Invalid id to get parent user...!'}, res); 
+            }
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
 
 module.exports = router;
