@@ -96,6 +96,8 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                         }
                         userData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: userData._id , active: false}).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
                         userData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: userData._id}));
+                        let no_of_childUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({parentId: userData._id}));
+                        userData.no_of_childUsers = parseInt(no_of_childUsers);
                         return responseManager.onSuccess('User details' , userData , res);
                     }else{
                         let parentData = await primary.model(constants.MODELS.users, userModel).findById(userData.parentId).select('_id mobile email profile_pic is_subscriber active_subscriber_plan is_parent parentId cycle dob goal name period_days active_plan_Id status').lean();
@@ -105,6 +107,8 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                             }
                             parentData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: parentData._id , active: false}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
                             parentData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: parentData._id}));
+                            let no_of_childUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({parentId: parentData._id}));
+                            userData.no_of_childUsers = parseInt(no_of_childUsers);
                             return responseManager.onSuccess('User details' , parentData , res);
                         }else{
                             return responseManager.badrequest({message: 'Parent user not found...!'}, res);
@@ -132,7 +136,6 @@ router.post('/getchildusers' , helper.authenticateToken , async (req , res) => {
         if(adminData && adminData != null){
             if(parentId && parentId.trim() != '' && mongoose.Types.ObjectId.isValid(parentId)){
                 let parentUserData = await primary.model(constants.MODELS.users, userModel).findById(parentId).lean();
-                console.log('parentUserData :',parentUserData);
                 if(parentUserData && parentUserData != null && parentUserData.is_parent === true){
                     primary.model(constants.MODELS.users, userModel).paginate({
                         $or: [
@@ -179,5 +182,24 @@ router.post('/getchildusers' , helper.authenticateToken , async (req , res) => {
         return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
     }
 });
+
+// router.post('/orderhistory' , helper.authenticateToken , async (req , res) => {
+//     const {parentId , page , limit , search} = req.body;
+//     if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+//         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+//         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+//         if(adminData && adminData != null){
+//             if(parentId && parentId.trim() != '' && mongoose.Types.ObjectId.isValid(parentId)){
+//                 let parentUserData = await primary.model(constants.MODELS.users, userModel).findById(parentId).lean();
+//             }else{
+//                 return responseManager.badrequest({message: 'Invalid id to get parent user...!'}, res); 
+//             }
+//         }else{
+//             return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+//         }
+//     }else{
+//         return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+//     }
+// });
 
 module.exports = router;
