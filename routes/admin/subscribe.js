@@ -66,7 +66,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                 select: '-status -address -updatedBy -createdAt -updatedAt -__v',
                 populate: [
                     {path: 'size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'},
-                    {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id mobile name is_parent'}
+                    {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id mobile name is_parent profile_pic'}
                 ],
                 sort: {createdAt: -1},
                 lean: true

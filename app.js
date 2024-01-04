@@ -12,6 +12,7 @@ let mongoose = require("mongoose");
 var expressLayouts = require('express-ejs-layouts');
 const helper = require('./utilities/helper');
 const cron = require('node-cron');
+// const orderController = require('./controllers/user/order/order');
 var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -95,7 +96,7 @@ app.use(function(err, req, res, next) {
 });
 
 // cron.schedule('* * * * * *' , async () => {
-//   console.log('order placed successfully...!');
+//   orderController.createSubscriptionOrder();
 // });
 
 // Please do not remove following two line of code...
