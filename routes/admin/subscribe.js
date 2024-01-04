@@ -56,9 +56,6 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                 query.active = active;
             }
             let subscribedUsers = await primary.model(constants.MODELS.subscribes, subscribeModel).find({
-                $or: [
-                    { 'plan.plan_type': { $regex: search, $options: 'i' } }
-                ],
                 ...query
             }).populate([
                 { path: 'size', model: primary.model(constants.MODELS.sizemasters, sizeMasterModel), select: '_id size_name' },
@@ -67,24 +64,67 @@ router.post('/', helper.authenticateToken, async (req, res) => {
             if (search && search != '' && search != null) {
                 let subscriptionPlansx = [];
                 async.forEachSeries(subscribedUsers, (suser, next_suser) => {
-                    if(suser.createdBy && (suser.createdBy.name && suser.createdBy.name != undefined && suser.createdBy.name != null && suser.createdBy.name.toLowerCase().includes(search.toLowerCase()))
-                    ||(suser.createdBy.mobile && suser.createdBy.mobile != undefined && suser.createdBy.mobile != null && suser.createdBy.mobile.toLowerCase().includes(search.toLowerCase()))
-                    ||(suser.createdBy.email && suser.createdBy.email != undefined && suser.createdBy.email != null && suser.createdBy.email.toLowerCase().includes(search.toLowerCase()))){
+                    if (suser.createdBy &&
+                        (
+                            suser.createdBy.name &&
+                            suser.createdBy.name != undefined &&
+                            suser.createdBy.name != null &&
+                            suser.createdBy.name.toLowerCase().includes(search.toLowerCase())
+                        ) || (
+                            suser.createdBy.mobile &&
+                            suser.createdBy.mobile != undefined &&
+                            suser.createdBy.mobile != null &&
+                            suser.createdBy.mobile.toLowerCase().includes(search.toLowerCase())
+                        ) || (
+                            suser.createdBy.email &&
+                            suser.createdBy.email != undefined &&
+                            suser.createdBy.email != null &&
+                            suser.createdBy.email.toLowerCase().includes(search.toLowerCase())
+                        ) || (
+                            suser.plan &&
+                            suser.plan.plan_type &&
+                            suser.plan.plan_type != undefined &&
+                            suser.plan.plan_type != null &&
+                            suser.plan.plan_type.toLowerCase().includes(search.toLowerCase())
+                        )
+                    ) {
                         subscriptionPlansx.push(suser);
                     }
                     next_suser();
                 }, () => {
-                    let subscriptionPlans = subscriptionPlansx.slice((page - 1) * limit, page * limit);
-                    return responseManager.onSuccess('Subscripber users details...!', subscriptionPlans, res);
+                    let obj = {
+                        docs: subscriptionPlansx.slice((page - 1) * limit, page * limit),
+                        totalDocs: parseInt(subscribedUsers.length),
+                        limit: parseInt(limit),
+                        totalPages: parseInt(parseInt(subscribedUsers.length) / limit),
+                        page: parseInt(page),
+                        pagingCounter: parseInt(page),
+                        hasPrevPage: (page > 1) ? true : false,
+                        hasNextPage: (page < parseInt(parseInt(subscribedUsers.length) / limit)) ? true : false,
+                        prevPage: (page > 1) ? (page - 1) : null,
+                        nextPage: (page < parseInt(parseInt(subscribedUsers.length) / limit)) ? (page + 1) : null
+                    }
+                    return responseManager.onSuccess('Subscripber users details...!', obj, res);
                 });
             } else {
-                let subscriptionPlans = subscribedUsers.slice((page - 1) * limit, page * limit);
-                return responseManager.onSuccess('Subscripber users details...!', subscriptionPlans, res);
+                let obj = {
+                    docs: subscribedUsers.slice((page - 1) * limit, page * limit),
+                    totalDocs: parseInt(subscribedUsers.length),
+                    limit: parseInt(limit),
+                    totalPages: parseInt(parseInt(subscribedUsers.length) / limit),
+                    page: parseInt(page),
+                    pagingCounter: parseInt(page),
+                    hasPrevPage: (page > 1) ? true : false,
+                    hasNextPage: (page < parseInt(parseInt(subscribedUsers.length) / limit)) ? true : false,
+                    prevPage: (page > 1) ? (page - 1) : null,
+                    nextPage: (page < parseInt(parseInt(subscribedUsers.length) / limit)) ? (page + 1) : null
+                }
+                return responseManager.onSuccess('Subscripber users details...!', obj, res);
             }
-        }else {
+        } else {
             return responseManager.badrequest({ message: 'Invalid token to get admin, Please try again...!' }, res);
         }
-    }else {
+    } else {
         return responseManager.badrequest({ message: 'Invalid token to get admin, Please try again...!' }, res);
     }
 });
