@@ -8,9 +8,39 @@ const constants = require('../../utilities/constants');
 const helper = require('../../utilities/helper');
 const adminModel = require('../../models/admin/admin.model');
 const userModel = require('../../models/users/users.model');
+const planModel = require('../../models/admin/plan.model');
 const subscribeModel = require('../../models/users/subscribe.model');
 const sizeMasterModel = require('../../models/admin/size.master');
 const addressModel = require('../../models/users/address.model');
+const async = require('async');
+
+router.get('/count' , helper.authenticateToken , async (req , res) => {
+    if(req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)){
+        let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+        let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
+        if(adminData && adminData != null){
+            let plans = await primary.model(constants.MODELS.plans, planModel).find({}).lean();
+            let total_subscription = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({}));
+            let data = {};
+            data['total_subscription'] = parseInt(total_subscription);
+            async.forEachSeries(plans, (plan , next_plan) => {
+                ( async () => {
+                    let total_count = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({'plan.planId': plan._id}));
+                    data[plan.plan_type] = parseInt(total_count);
+                    next_plan();
+                })().catch((error) => {
+                    return responseManager.onError(error , res);
+                });
+            }, () => {
+                return responseManager.onSuccess('count...!' , data , res);
+            });
+        }else{
+            return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+        }
+    }else{
+        return responseManager.badrequest({message: 'Invalid token to get admin, Please try again...!'}, res);
+    }
+});
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
     const {page , limit , search , planId , active} = req.body;
