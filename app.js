@@ -102,7 +102,12 @@ app.use(function(err, req, res, next) {
 // console.log(helper.addDaysToTimestamp(1683504000000 , 28-1));
 // console.log(helper.addDaysToTimestamp(1703246340000 , 5-1));
 
+// parent user
 // let token = helper.generateAccessToken({_id: '658d501d1584632fa7587d05'});
-// console.log('token :',token);
+// console.log('parent user token :',token);
+
+//child user
+// let token = helper.generateAccessToken({_id: '658d5cb9b443cb6471c87ba5'});
+// console.log('child user token :',token);
 
 module.exports = app;

@@ -149,7 +149,7 @@ router.post('/getchildusers' , helper.authenticateToken , async (req , res) => {
                         page,
                         limit: parseInt(limit),
                         select: '_id name mobile email profile_pic is_parent parentId is_subscriber active_subscriber_plan cycle period_days status createdAt',
-                        populate: {path: 'active_subscriber_plan' , model: primary.model(constants.MODELS.subscribes, subscribeModel) , select: '_id paymentId plan original_amount discount discounted_amount remaining_cycle active buyAt buyAt_timestamp'},
+                        populate: {path: 'active_subscriber_plan' , model: primary.model(constants.MODELS.subscribes, subscribeModel) , select: '_id paymentId plan delivery_dates original_amount discount discounted_amount remaining_cycle active buyAt buyAt_timestamp'},
                         sort: {createdAt: -1},
                         lean: true
                     }).then((childUsers) => {
