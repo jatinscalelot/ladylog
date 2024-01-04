@@ -10,6 +10,7 @@ const adminModel = require('../../models/admin/admin.model');
 const userModel = require('../../models/users/users.model');
 const subscribeModel = require('../../models/users/subscribe.model');
 const sizeMasterModel = require('../../models/admin/size.master');
+const addressModel = require('../../models/users/address.model');
 
 router.post('/' , helper.authenticateToken , async (req , res) => {
     const {page , limit , search , planId , active} = req.body;
@@ -35,7 +36,7 @@ router.post('/' , helper.authenticateToken , async (req , res) => {
                 select: '-status -address -updatedBy -createdAt -updatedAt -__v',
                 populate: [
                     {path: 'size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'},
-                    {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id mobile name'}
+                    {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id mobile name is_parent'}
                 ],
                 sort: {createdAt: -1},
                 lean: true
@@ -59,7 +60,11 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
         let adminData = await primary.model(constants.MODELS.admins, adminModel).findById(req.token._id).lean();
         if(adminData && adminData != null){
             if(subscribeId && subscribeId.trim() != '' && mongoose.Types.ObjectId.isValid(subscribeId)){
-                let subscribeData = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(subscribeId).lean();
+                let subscribeData = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(subscribeId).select('-status -updatedBy -createdAt -updatedAt -__v').populate([
+                    {path: 'size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'},
+                    {path: 'createdBy' , model: primary.model(constants.MODELS.users, userModel) , select: '_id name profile_pic mobile email is_parent cycle period_days'},
+                    {path: 'address' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
+                ]).lean();
                 if(subscribeData && subscribeData != null){
                     return responseManager.onSuccess('Subscription details...!' , subscribeData , res);
                 }else{
