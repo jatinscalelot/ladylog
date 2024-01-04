@@ -37,6 +37,7 @@ router.post('/analysis' , helper.authenticateToken , async (req , res) => {
                 page,
                 limit: parseInt(limit),
                 select: '_id name mobile email profile_pic is_parent parentId is_subscriber active_subscriber_plan active_plan_Id',
+                populate: {path: 'active_subscriber_plan' , model: primary.model(constants.MODELS.subscribes, subscribeModel) , select: '-status -address -updatedBy -createdAt -updatedAt -__v'},
                 sort: {createdAt: -1},
                 lean: true
             }).then((users) => {
@@ -59,10 +60,6 @@ router.post('/analysis' , helper.authenticateToken , async (req , res) => {
                         user.last_period_end_date = last_next_cycle_data[1].period_end_date_timestamp;
                         user.next_period_start_date = last_next_cycle_data[0].period_start_date_timestamp;
                         user.next_period_end_date = last_next_cycle_data[0].period_end_date_timestamp;
-                        if( user.is_subscriber === true){
-                            let subscribeData = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(user.active_subscriber_plan).lean();
-                            user.current_plan = subscribeData.plan.plan_type;
-                        }
                         next_user();
                     })().catch((error) => {
                         return responseManager.onError(error , res);
@@ -92,21 +89,21 @@ router.post('/getone' , helper.authenticateToken , async (req , res) => {
                 if(userData && userData != null){
                     if(userData.is_parent === true){
                         if(userData.is_subscriber === true){
-                            userData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(userData.active_subscriber_plan).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+                            let current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(userData.active_subscriber_plan).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
+                            userData.active_subscriber_plan = current_plan;
                         }
                         userData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: userData._id , active: false}).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
-                        userData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: userData._id , active: false}));
                         let no_of_childUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({parentId: userData._id}));
                         userData.no_of_childUsers = parseInt(no_of_childUsers);
                         return responseManager.onSuccess('User details' , userData , res);
                     }else{
-                        let parentData = await primary.model(constants.MODELS.users, userModel).findById(userData.parentId).select('_id mobile email profile_pic is_subscriber active_subscriber_plan is_parent parentId cycle dob goal name period_days active_plan_Id status').lean();
+                        let parentData = await primary.model(constants.MODELS.users, userModel).findById(userData.parentId).select('_id mobile email profile_pic is_subscriber active_subscriber_plan is_parent parentId cycle dob goal name period_days active_plan_Id status').populate({
+                            path: 'active_subscriber_plan',
+                            model: primary.model(constants.MODELS.subscribes, subscribeModel),
+                            select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'
+                        }).lean();
                         if(parentData && parentData != null){
-                            if(parentData.is_subscriber === true){
-                                parentData.current_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).findById(parentData.active_subscriber_plan).select('-status -updatedBy -createdAt -updatedAt -__v').lean();
-                            }
                             parentData.previous_plan = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: parentData._id , active: false}).select('-status -updatedBy -createdAt -updatedAt -__v').sort({buyAt_timestamp: -1}).limit(5).lean();
-                            parentData.total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: parentData._id , active: false}));
                             let no_of_childUsers = parseInt(await primary.model(constants.MODELS.users, userModel).countDocuments({parentId: parentData._id}));
                             userData.no_of_childUsers = parseInt(no_of_childUsers);
                             return responseManager.onSuccess('User details' , parentData , res);
@@ -149,15 +146,13 @@ router.post('/getchildusers' , helper.authenticateToken , async (req , res) => {
                         page,
                         limit: parseInt(limit),
                         select: '_id name mobile email profile_pic is_parent parentId is_subscriber active_subscriber_plan cycle period_days status createdAt',
-                        populate: {path: 'active_subscriber_plan' , model: primary.model(constants.MODELS.subscribes, subscribeModel) , select: '_id paymentId plan delivery_dates original_amount discount discounted_amount remaining_cycle active buyAt buyAt_timestamp'},
+                        populate: {path: 'active_subscriber_plan' , model: primary.model(constants.MODELS.subscribes, subscribeModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
                         sort: {createdAt: -1},
                         lean: true
                     }).then((childUsers) => {
                         async.forEachSeries(childUsers.docs, (childUser , next_childUser) => {
                             ( async () => {
-                                let total_plans = parseInt(await primary.model(constants.MODELS.subscribes, subscribeModel).countDocuments({createdBy: childUser._id , active: false}));
-                                childUser.total_plans = parseInt(total_plans);
-                                let previous_plans = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: childUser._id , active: false}).sort({buyAt_timestamp: -1}).select('_id paymentId plan original_amount discount discounted_amount remaining_cycle active buyAt buyAt_timestamp createdBy').limit(5).lean();
+                                let previous_plans = await primary.model(constants.MODELS.subscribes, subscribeModel).find({createdBy: childUser._id , active: false}).sort({buyAt_timestamp: -1}).select('-status -createdBy -updatedBy -createdAt -updatedAt -__v').limit(5).lean();
                                 childUser.previous_plans = previous_plans;
                                 next_childUser();
                             })().catch((error) => {
