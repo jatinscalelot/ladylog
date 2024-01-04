@@ -288,4 +288,26 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/currentplan' , helper.authenticateToken , async (req , res) => {
+  if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+    if (userData && userData != null && userData.status === true) {
+      if(userData.is_subscriber === true){
+        let currentplan = await primary.model(constants.MODELS.subscribes, subscribeModel).findOne({_id: userData.active_subscriber_plan , active: true}).select('-buyAt_timestamp -status -createdBy -updatedBy -createdAt -updatedAt -__v').populate([
+          {path: 'size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'}, 
+          {path: 'address' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'}, 
+        ]).lean();
+        return responseManager.onSuccess('Current plan details...!' , currentplan , res);
+      }else{
+        return responseManager.badrequest({message: 'You are not subscriber user...!'}, res);
+      }
+    } else {
+      return responseManager.badrequest({ message: 'Invalid token to get user, Please try again...!' }, res);
+    }
+  } else {
+    return responseManager.badrequest({ message: 'Invalid token to get user, Please try again...!' }, res);
+  }
+});
+
 module.exports = router;

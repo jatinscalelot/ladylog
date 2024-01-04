@@ -26,26 +26,13 @@ router.get('/', helper.authenticateToken, async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
         let primary = mongoConnection.useDb(constants.DEFAULT_DB);
-        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+        let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).select('_id name mobile email profile_pic dob goal is_subscriber active_subscriber_plan status').populate({
+          path: 'active_subscriber_plan',
+          model: primary.model(constants.MODELS.subscribes, subscribeModel),
+          select: '_id plan'
+        }).lean();
         if (userData && userData != null && userData.status === true) {
-            let data = {
-                _id: userData._id,
-                name: userData.name,
-                mobile: userData.mobile,
-                email: userData.email,
-                profile_pic: userData.profile_pic,
-                dob: userData.dob,
-                goal: userData.goal
-            };
-            if(userData.is_subscriber === true){
-              let subscribeData = await primary.model(constants.MODELS.subscribes , subscribeModel).findById(userData.active_subscriber_plan).populate([
-                {path: 'plan.planId' , model: primary.model(constants.MODELS.plans , planModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'},
-                {path: 'size' , model: primary.model(constants.MODELS.sizemasters , sizeMasterModel) , select: '_id size_name'},
-                {path: 'address' , model: primary.model(constants.MODELS.addresses , addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'}
-              ]).select('-paymentId -status -createdBy -updatedBy -createdAt -updatedAt -__v').lean();
-              data.plan = subscribeData;
-            }
-            return responseManager.onSuccess('User profile', data, res);
+            return responseManager.onSuccess('User profile', userData, res);
         } else {
             return responseManager.badrequest({ message: 'Invalid token to get user profile, please try again' }, res);
         }
