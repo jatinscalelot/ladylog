@@ -61,11 +61,11 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                 { path: 'size', model: primary.model(constants.MODELS.sizemasters, sizeMasterModel), select: '_id size_name' },
                 { path: 'createdBy', model: primary.model(constants.MODELS.users, userModel), select: '_id mobile email name is_parent profile_pic' }
             ]).select('-status -address -updatedBy -createdAt -updatedAt -__v').sort({ buyAt_timestamp: -1 }).lean();
-            if (search && search != '' && search != null) {
-                if(is_parent === true && is_parent === false){
+            if ((search && search != '' && search != null) || is_parent === true || is_parent === false) {
+                if(is_parent === true){
                     let subscriptionPlansx = [];
                     async.forEachSeries(subscribedUsers, (suser, next_suser) => {
-                        if (suser.createdBy && suser.createdBy.is_parent === is_parent &&
+                        if (suser.createdBy &&
                             (
                                 suser.createdBy.name &&
                                 suser.createdBy.name != undefined &&
@@ -89,7 +89,56 @@ router.post('/', helper.authenticateToken, async (req, res) => {
                                 suser.plan.plan_type.toLowerCase().includes(search.toLowerCase())
                             )
                         ) {
-                            subscriptionPlansx.push(suser);
+                            if(suser.createdBy.is_parent === true){
+                                subscriptionPlansx.push(suser);
+                            }
+                        }
+                        next_suser();
+                    }, () => {
+                        let obj = {
+                            docs: subscriptionPlansx.slice((page - 1) * limit, page * limit),
+                            totalDocs: parseInt(subscribedUsers.length),
+                            limit: parseInt(limit),
+                            totalPages: parseInt(parseInt(subscribedUsers.length) / limit),
+                            page: parseInt(page),
+                            pagingCounter: parseInt(page),
+                            hasPrevPage: (page > 1) ? true : false,
+                            hasNextPage: (page < parseInt(parseInt(subscribedUsers.length) / limit)) ? true : false,
+                            prevPage: (page > 1) ? (page - 1) : null,
+                            nextPage: (page < parseInt(parseInt(subscribedUsers.length) / limit)) ? (page + 1) : null
+                        }
+                        return responseManager.onSuccess('Subscripber users details...!', obj, res);
+                    });
+                }else if (is_parent === false){
+                    let subscriptionPlansx = [];
+                    async.forEachSeries(subscribedUsers, (suser, next_suser) => {
+                        if (suser.createdBy &&
+                            (
+                                suser.createdBy.name &&
+                                suser.createdBy.name != undefined &&
+                                suser.createdBy.name != null &&
+                                suser.createdBy.name.toLowerCase().includes(search.toLowerCase())
+                            ) || (
+                                suser.createdBy.mobile &&
+                                suser.createdBy.mobile != undefined &&
+                                suser.createdBy.mobile != null &&
+                                suser.createdBy.mobile.toLowerCase().includes(search.toLowerCase())
+                            ) || (
+                                suser.createdBy.email &&
+                                suser.createdBy.email != undefined &&
+                                suser.createdBy.email != null &&
+                                suser.createdBy.email.toLowerCase().includes(search.toLowerCase())
+                            ) || (
+                                suser.plan &&
+                                suser.plan.plan_type &&
+                                suser.plan.plan_type != undefined &&
+                                suser.plan.plan_type != null &&
+                                suser.plan.plan_type.toLowerCase().includes(search.toLowerCase())
+                            )
+                        ) {
+                            if(suser.createdBy.is_parent === false){
+                                subscriptionPlansx.push(suser);
+                            }
                         }
                         next_suser();
                     }, () => {
