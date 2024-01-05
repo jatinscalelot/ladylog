@@ -10,9 +10,12 @@ var multer = require('multer');
 var fs = require('fs');
 let mongoose = require("mongoose");
 var expressLayouts = require('express-ejs-layouts');
+const mongoConnection = require('./utilities/connections');
+const constants = require('./utilities/constants');
 const helper = require('./utilities/helper');
+const subscribeModel = require('./models/users/subscribe.model');
 const cron = require('node-cron');
-// const orderController = require('./controllers/user/order/order');
+const async = require('async');
 var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -95,8 +98,30 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-// cron.schedule('10 * * * * *' , async () => {
-//   orderController.createSubscriptionOrder();
+// cron.schedule('5 * * * * *' , async () => {
+//   let currentDate = new Date();
+//   let nextDateTimeStamp = currentDate.setDate(currentDate.getDate() + 9);
+//   let nextDateObj = new Date(nextDateTimeStamp);
+//   let nextDateStartObj = new Date(nextDateObj.getFullYear() , nextDateObj.getMonth() , nextDateObj.getDate() , 0 , 0 , 0);
+//   let nextDateStartTimestamp = parseInt(nextDateStartObj.getTime() + 19800000);
+//   let nextDateStart = new Date(nextDateStartTimestamp);
+//   console.log('nextDateStart :',nextDateStart);
+//   console.log('nextDateStartTimestamp :',nextDateStartTimestamp);
+//   let nextDateEndObj = new Date(nextDateStart.getFullYear() , nextDateStart.getMonth() , nextDateStart.getDate() , 23 , 59 , 59);
+//   let nextDateEndTimestamp = parseInt(nextDateEndObj.getTime() + 19800000);
+//   let nextDateEnd = new Date(nextDateEndTimestamp);
+//   console.log('nextDateEnd :',nextDateEnd);
+//   console.log('nextDateEndTimestamp :',nextDateEndTimestamp);
+//   let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+//   // let subscriptionOrders = await primary.model(constants.MODELS.subscribes, subscribeModel).find({active: true , 'delivery_dates.delivery_timestamp': {$elemMatch: {$gte: nextDateStartTimestamp , $lt: nextDateEndTimestamp}}});
+//   let subscriptionOrders = await primary.model(constants.MODELS.subscribes, subscribeModel).find({active: true , $and: [{ 'delivery_dates.delivery_timestamp': {$gte: nextDateStartTimestamp} } , { 'delivery_dates.delivery_timestamp': {$lte: nextDateEndTimestamp}}]});
+//   console.log('subscriptionOrders :',subscriptionOrders);
+//   async.forEachSeries(subscriptionOrders, (subscriptionOrder , next_subscriptionOrder) => {
+//     console.log('subscriptionOrder :',subscriptionOrder);
+//     next_subscriptionOrder();
+//   }, () => {
+//     console.log('All order placed successfully...!');
+//   })
 // });
 
 // Please do not remove following two line of code...
