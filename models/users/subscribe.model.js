@@ -31,6 +31,10 @@ let deliveryDateSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  is_create: {
+    type: Boolean,
+    default: false
+  },
   delivered: {
     type: Boolean,
     default: false
@@ -45,6 +49,10 @@ let schema = new mongoose.Schema({
     type: planSchema,
     require: true,
     default: () => ({})
+  },
+  date: {
+    type: Number,
+    require: true
   },
   per_cycle_quantity: {
     type: Number,

@@ -12,6 +12,7 @@ let mongoose = require("mongoose");
 var expressLayouts = require('express-ejs-layouts');
 const helper = require('./utilities/helper');
 const cron = require('node-cron');
+// const orderController = require('./controllers/user/order/order');
 var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -94,8 +95,8 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-// cron.schedule('* * * * * *' , async () => {
-//   console.log('hello');
+// cron.schedule('10 * * * * *' , async () => {
+//   orderController.createSubscriptionOrder();
 // });
 
 // Please do not remove following two line of code...
@@ -109,5 +110,13 @@ app.use(function(err, req, res, next) {
 //child user
 // let token = helper.generateAccessToken({_id: '658d5cb9b443cb6471c87ba5'});
 // console.log('child user token :',token);
+
+// let dateObj = new Date(1705190400000);
+// console.log(dateObj);
+
+// let newDateObj =  new Date(dateObj.getFullYear() , dateObj.getMonth() , 18 , 0 , 0);
+// let newDateTimestamp = parseInt(newDateObj.getTime() + 19800000);
+// let newDate = new Date(newDateTimestamp);
+// console.log(newDate);
 
 module.exports = app;

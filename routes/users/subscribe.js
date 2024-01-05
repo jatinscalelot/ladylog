@@ -61,7 +61,7 @@ router.post('/plans', helper.authenticateToken, async (req, res) => {
                       let dateObj = new Date(x);
                       let Difference_In_Time = dateObj.getTime() - currentDate.getTime();
                       let Difference_In_Days = Math.round(Difference_In_Time / (1000 * 3600 * 24));
-                      if(Difference_In_Days >= 1){
+                      if (Difference_In_Days >= 1) {
                         Difference_In_Days = Difference_In_Days + 2;
                       }
                       async.forEachSeries(cycle_array, (cycle, next_cycle) => {
@@ -127,7 +127,7 @@ router.get('/sizes', helper.authenticateToken, async (req, res) => {
 });
 
 router.post('/buy', helper.authenticateToken, async (req, res) => {
-  const { paymentId, planId, quantity, date , sizeId, addressId } = req.body;
+  const { paymentId, planId, quantity, date, sizeId, addressId } = req.body;
   if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
@@ -143,7 +143,7 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
                   if (addressId && addressId.trim() != '' && mongoose.Types.ObjectId.isValid(addressId)) {
                     let addressData = await primary.model(constants.MODELS.addresses, addressModel).findOne({ _id: new mongoose.Types.ObjectId(addressId), createdBy: new mongoose.Types.ObjectId(userData._id) }).lean();
                     if (addressData && addressData != null && addressData.status === true) {
-                      if(date && Number.isInteger(date) && date >= 1 && date <= 28){
+                      if (date && Number.isInteger(date) && date >= 1 && date <= 28) {
                         let no_of_cycle = parseInt(planData.no_of_cycle);
                         // let no_of_cycle = 35;
                         let per_cycle_quantity = parseInt(quantity);
@@ -163,18 +163,18 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
                         let dateObj = new Date(x);
                         let Difference_In_Time = dateObj.getTime() - currentDate.getTime();
                         let Difference_In_Days = Math.round(Difference_In_Time / (1000 * 3600 * 24));
-                        if(Difference_In_Days >= 1){
+                        if (Difference_In_Days >= 1) {
                           Difference_In_Days = Difference_In_Days + 2;
                         }
                         let delivery_dates = [];
-                        if(Difference_In_Days >= 10){
+                        if (Difference_In_Days >= 10) {
                           let obj = {
                             delivery_date: dateObj,
                             delivery_timestamp: dateObj.getTime(),
                           };
                           delivery_dates.push(obj);
-                        }else{
-                          let nextDateObj = new Date(dateObj.getFullYear() , dateObj.getMonth() + 1 , date , 0 , 0);
+                        } else {
+                          let nextDateObj = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, date, 0, 0);
                           let nextDateTimestamp = parseInt(nextDateObj.getTime() + 19800000);
                           let nextDate = new Date(nextDateTimestamp);
                           let obj = {
@@ -190,11 +190,11 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
                           };
                           cycle_array.push(obj);
                         }
-                        async.forEachSeries(cycle_array, (cycle , next_cycle) => {
+                        async.forEachSeries(cycle_array, (cycle, next_cycle) => {
                           if (Difference_In_Days >= 10) {
                             let length_of_delivery_dates = delivery_dates.length;
                             let lastDateObj = delivery_dates[length_of_delivery_dates - 1].delivery_date;
-                            let nextDateObj = new Date(lastDateObj.getFullYear() , lastDateObj.getMonth() + 1 , date , 0 , 0);
+                            let nextDateObj = new Date(lastDateObj.getFullYear(), lastDateObj.getMonth() + 1, date, 0, 0);
                             let nextDateTimestamp = parseInt(nextDateObj.getTime() + 19800000);
                             let nextDate = new Date(nextDateTimestamp);
                             let obj = {
@@ -205,7 +205,7 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
                           } else {
                             let length_of_delivery_dates = delivery_dates.length;
                             let lastDateObj = delivery_dates[length_of_delivery_dates - 1].delivery_date;
-                            let nextDateObj = new Date(lastDateObj.getFullYear() , lastDateObj.getMonth() + 1 , date , 0 , 0);
+                            let nextDateObj = new Date(lastDateObj.getFullYear(), lastDateObj.getMonth() + 1, date, 0, 0);
                             let nextDateTimestamp = parseInt(nextDateObj.getTime() + 19800000);
                             let nextDate = new Date(nextDateTimestamp);
                             let obj = {
@@ -216,7 +216,7 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
                           }
                           next_cycle();
                         }, () => {
-                          ( async () => {
+                          (async () => {
                             let subscribePlanObj = {
                               paymentId: paymentId.trim(),
                               plan: {
@@ -225,6 +225,7 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
                                 no_of_cycle: parseInt(planData.no_of_cycle),
                                 discount_per: parseFloat(planData.discount_per.toFixed(2))
                               },
+                              date: parseInt(date),
                               per_cycle_quantity: parseInt(per_cycle_quantity),
                               total_quantity: parseInt(total_quantity),
                               original_amount: parseFloat(original_amount.toFixed(2)),
@@ -250,11 +251,11 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
                             let updatedUserData = await primary.model(constants.MODELS.users, userModel).findByIdAndUpdate(userData._id, userObj, { returnOriginal: false }).lean();
                             return responseManager.onSuccess('subscribe successfully...!', 1, res);
                           })().catch((error) => {
-                            return responseManager.onError(error , res);
+                            return responseManager.onError(error, res);
                           });
                         });
-                      }else{
-                        return responseManager.badrequest({message: 'Invalid date...!'}, res);
+                      } else {
+                        return responseManager.badrequest({ message: 'Invalid date...!' }, res);
                       }
                     } else {
                       return responseManager.badrequest({ message: 'Invalid id to get address...!' }, res);
@@ -288,19 +289,19 @@ router.post('/buy', helper.authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/currentplan' , helper.authenticateToken , async (req , res) => {
+router.get('/currentplan', helper.authenticateToken, async (req, res) => {
   if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
     let primary = mongoConnection.useDb(constants.DEFAULT_DB);
     let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
     if (userData && userData != null && userData.status === true) {
-      if(userData.is_subscriber === true){
-        let currentplan = await primary.model(constants.MODELS.subscribes, subscribeModel).findOne({_id: userData.active_subscriber_plan , active: true}).select('-buyAt_timestamp -status -createdBy -updatedBy -createdAt -updatedAt -__v').populate([
-          {path: 'size' , model: primary.model(constants.MODELS.sizemasters, sizeMasterModel) , select: '_id size_name'}, 
-          {path: 'address' , model: primary.model(constants.MODELS.addresses, addressModel) , select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v'}, 
+      if (userData.is_subscriber === true) {
+        let currentplan = await primary.model(constants.MODELS.subscribes, subscribeModel).findOne({ _id: userData.active_subscriber_plan, active: true }).select('-buyAt_timestamp -status -createdBy -updatedBy -createdAt -updatedAt -__v').populate([
+          { path: 'size', model: primary.model(constants.MODELS.sizemasters, sizeMasterModel), select: '_id size_name' },
+          { path: 'address', model: primary.model(constants.MODELS.addresses, addressModel), select: '-status -createdBy -updatedBy -createdAt -updatedAt -__v' },
         ]).lean();
-        return responseManager.onSuccess('Current plan details...!' , currentplan , res);
-      }else{
-        return responseManager.badrequest({message: 'You are not subscriber user...!'}, res);
+        return responseManager.onSuccess('Current plan details...!', currentplan, res);
+      } else {
+        return responseManager.badrequest({ message: 'You are not subscriber user...!' }, res);
       }
     } else {
       return responseManager.badrequest({ message: 'Invalid token to get user, Please try again...!' }, res);
@@ -309,5 +310,128 @@ router.get('/currentplan' , helper.authenticateToken , async (req , res) => {
     return responseManager.badrequest({ message: 'Invalid token to get user, Please try again...!' }, res);
   }
 });
+
+router.post('/updateactiveplan', helper.authenticateToken, async (req, res) => {
+  const {activePlanId , date} = req.body;
+  if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
+    let primary = mongoConnection.useDb(constants.DEFAULT_DB);
+    let userData = await primary.model(constants.MODELS.users, userModel).findById(req.token._id).lean();
+    if (userData && userData != null && userData.status === true) {
+      if (userData.is_subscriber === true) {
+        if(activePlanId && activePlanId.trim() != '' && mongoose.Types.ObjectId.isValid(activePlanId)){
+          let activePlanData = await primary.model(constants.MODELS.subscribes, subscribeModel).findOne({_id: new mongoose.Types.ObjectId(activePlanId) , createdBy: userData._id}).lean();
+          if (activePlanData && activePlanData != null){
+            if(activePlanData.active === true){
+              if(date && Number.isInteger(date) && date >= 1 && date <= 28){
+                let nextdeliveryDateObj = {};
+                let delivery_dates = activePlanData.delivery_dates;
+                for(let i=0 ; i < delivery_dates.length ; i++){
+                  if(delivery_dates[i].delivered === false ){
+                    nextdeliveryDateObj = delivery_dates[i];
+                    break;
+                  }
+                }
+                let currentDate = new Date();
+                let nextdeliveryDate = new Date(nextdeliveryDateObj.delivery_timestamp);
+                let Difference_In_Time = nextdeliveryDate.getTime() - currentDate.getTime();
+                let Difference_In_Days = Math.round(Difference_In_Time / (1000 * 3600 * 24));
+                if (Difference_In_Days >= 1) {
+                  Difference_In_Days = Difference_In_Days + 2;
+                }
+                if(Difference_In_Days >= 10){
+                  let new_delivery_dates = [];
+                  async.forEachSeries(activePlanData.delivery_dates, (delivery_date , next_delivery_date) => {
+                    if(delivery_date.delivered === false){
+                      let dateObj = new Date(delivery_date.delivery_timestamp);
+                      let newDateObj = new Date(dateObj.getFullYear(), dateObj.getMonth(), date, 0, 0);
+                      let newDateTimestamp = parseInt(newDateObj.getTime() + 19800000);
+                      let newDate = new Date(newDateTimestamp);
+                      let obj = {
+                        delivery_date : newDate,
+                        delivery_timestamp : newDateTimestamp,
+                        orderId : "",
+                        delivered : false,
+                        _id : new mongoose.Types.ObjectId(delivery_date._id) 
+                      };
+                      new_delivery_dates.push(obj);
+                    }else{
+                      new_delivery_dates.push(delivery_date);
+                    }
+                    next_delivery_date();
+                  }, () => {
+                    ( async () => {
+                      let obj = {
+                        date: parseInt(date),
+                        delivery_dates: new_delivery_dates,
+                        updatedBy: new mongoose.Types.ObjectId(userData._id),
+                        updatedAt: new Date()
+                      };
+                      let updatedActiveplanData = await primary.model(constants.MODELS.subscribes, subscribeModel).findByIdAndUpdate(activePlanData._id , obj , {returnOriginal: false}).lean();
+                      return responseManager.onSuccess('Date changed successfully...!', 1 , res);
+                    })().catch((error) => {
+                      return responseManager.onError(error , res);
+                    });
+                  });
+                }else{
+                  let new_delivery_dates = [];
+                  async.forEachSeries(activePlanData.delivery_dates, (delivery_date , next_delivery_date) => {
+                    if(delivery_date.delivered === false){
+                      if(nextdeliveryDateObj._id.toString() != delivery_date._id.toString()){
+                        let dateObj = new Date(delivery_date.delivery_timestamp);
+                        let newDateObj = new Date(dateObj.getFullYear(), dateObj.getMonth(), date, 0, 0);
+                        let newDateTimestamp = parseInt(newDateObj.getTime() + 19800000);
+                        let newDate = new Date(newDateTimestamp);
+                        let obj = {
+                          delivery_date : newDate,
+                          delivery_timestamp : newDateTimestamp,
+                          orderId : "",
+                          delivered : false,
+                          _id : new mongoose.Types.ObjectId(delivery_date._id) 
+                        };
+                        new_delivery_dates.push(obj);
+                      }else{
+                        new_delivery_dates.push(delivery_date);
+                      }
+                    }else{
+                      new_delivery_dates.push(delivery_date);
+                    }
+                    next_delivery_date();
+                  }, () => {
+                    ( async () => {
+                      let obj = {
+                        date: parseInt(date),
+                        delivery_dates: new_delivery_dates,
+                        updatedBy: new mongoose.Types.ObjectId(userData._id),
+                        updatedAt: new Date()
+                      };
+                      let updatedActiveplanData = await primary.model(constants.MODELS.subscribes, subscribeModel).findByIdAndUpdate(activePlanData._id , obj , {returnOriginal: false}).lean();
+                      return responseManager.onSuccess('Date changed successfully...!', 1 , res);
+                    })().catch((error) => {
+                      return responseManager.onError(error , res);
+                    });
+                  });
+                }
+              }else{
+                return responseManager.badrequest({ message: 'Select valid date...!' }, res);
+              }
+            }else{
+              return responseManager.badrequest({ message: 'Invalid id to get active plan details...!'}, res);
+            }
+          }else{
+            return responseManager.badrequest({ message: 'Invalid id to get active plan details...!'}, res);
+          }
+        }else{
+          return responseManager.badrequest({ message: 'Invalid id to get active plan details...!'}, res);
+        }
+      } else {
+        return responseManager.badrequest({ message: 'You are not subscriber user...!' }, res);
+      }
+    } else {
+      return responseManager.badrequest({ message: 'Invalid token to get user, Please try again...!' }, res);
+    }
+  } else {
+    return responseManager.badrequest({ message: 'Invalid token to get user, Please try again...!' }, res);
+  }
+})
 
 module.exports = router;
