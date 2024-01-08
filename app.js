@@ -114,14 +114,16 @@ app.use(function(err, req, res, next) {
 //   console.log('nextDateEndTimestamp :',nextDateEndTimestamp);
 //   let primary = mongoConnection.useDb(constants.DEFAULT_DB);
 //   // let subscriptionOrders = await primary.model(constants.MODELS.subscribes, subscribeModel).find({active: true , 'delivery_dates.delivery_timestamp': {$elemMatch: {$gte: nextDateStartTimestamp , $lt: nextDateEndTimestamp}}});
-//   let subscriptionOrders = await primary.model(constants.MODELS.subscribes, subscribeModel).find({active: true , $and: [{ 'delivery_dates.delivery_timestamp': {$gte: nextDateStartTimestamp} } , { 'delivery_dates.delivery_timestamp': {$lte: nextDateEndTimestamp}}]});
+//   // let subscriptionOrders = await primary.model(constants.MODELS.subscribes, subscribeModel).find({active: true , $and: [{ 'delivery_dates.delivery_timestamp': {$gte: nextDateStartTimestamp} } , { 'delivery_dates.delivery_timestamp': {$lte: nextDateEndTimestamp}}]});
+//   let subscriptionOrders = await primary.model(constants.MODELS.subscribes, subscribeModel).find({active: true , 'delivery_dates.delivery_timestamp': {$gte: nextDateStartTimestamp , $lte: nextDateEndTimestamp}}).lean();
 //   console.log('subscriptionOrders :',subscriptionOrders);
+//   console.log('length of subscriptionOrders :',subscriptionOrders.length);
 //   async.forEachSeries(subscriptionOrders, (subscriptionOrder , next_subscriptionOrder) => {
 //     console.log('subscriptionOrder :',subscriptionOrder);
 //     next_subscriptionOrder();
 //   }, () => {
 //     console.log('All order placed successfully...!');
-//   })
+//   });
 // });
 
 // Please do not remove following two line of code...
